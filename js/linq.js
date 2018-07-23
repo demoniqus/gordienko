@@ -103,7 +103,7 @@ var linq = function (collection) {
             if (this.mode !== 'a') {
                 var c = [];
                 for (var key in this.collection) {
-                    c.push(collection[key]);
+                    c.push(this.collection[key]);
                 }
                 this.collection = c;
             }

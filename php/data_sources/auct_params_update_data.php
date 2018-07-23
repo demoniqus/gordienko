@@ -22,8 +22,14 @@ $entity = $db->auction_params->getEmptyEntity();
 /*Поля Name и IdAuction не могут быть изменены*/
 unset($entity['Name']);
 unset($entity['IdAuction']);
-
-$db->auction_params->Update($entity);
+if ($entity['IdParam'] == 0) {
+    $db->auction_params->Insert($entity);
+    
+}
+else {
+    $db->auction_params->Update($entity);
+    
+}
 
 echo json_encode(
     (new linq($db->auction_params->getEntity($entity['IdParam'])))

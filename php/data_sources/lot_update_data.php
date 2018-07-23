@@ -25,6 +25,8 @@ $entity = $db->lot_list->getEmptyEntity();
 unset($entity['Key']);
 unset($entity['IdAuction']);
 
+$entity['VIN'] = base64_decode($entity['VIN']);
+
 $db->lot_list->Update($entity);
 
 $lot = $db->lot_list->getEntity($entity['IdLot']);

@@ -26,7 +26,7 @@ if ($auction) {
              * Т.к. скрипт подключается на верхнем уровне проекта,
              * это влияет на указание пути
              */
-            $urlList = FileSystem::getFiles('./' . $rootCatName, true, '*.url');
+            $urlList = FileSystem::getFiles('./' . $rootCatName, true, false, true, '*.url');
             $auction_lotes_list = (new linq($urlList))->select(function($sourceName){
                 return array(
                     'sourceFile' => $sourceName,
@@ -70,7 +70,7 @@ if ($auction) {
              * Т.к. скрипт подключается на верхнем уровне проекта,
              * это влияет на указание пути
              */
-            $urlList = FileSystem::getFiles('./' . $rootCatName, true, '*.url');
+            $urlList = FileSystem::getFiles('./' . $rootCatName, true, false, true, '*.url');
             $auction_lotes_list = (new linq($urlList))->select(function($sourceName){
                 return array(
                     'sourceFile' => $sourceName,

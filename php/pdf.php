@@ -13,7 +13,13 @@ class PDF extends FPDF {
     public static $standFontSize = 14;
     public static $orientation = 'P';
     private static $pageSize = 'A4';
+    public static function getPageSize() {
+        return self::$pageSize;
+    }
     private static $fontName = 'Times';
+    public static function getFontName() {
+        return self::$fontName;
+    }
     /*
      * Коэффициент для расчета ширины миниатюр.
      * Указывается в десятичной дроби от ширины области печати миниатюр,
@@ -29,11 +35,122 @@ class PDF extends FPDF {
     private $PDFPages = array(
         //'PageIndex' => 'PDFPage instance'
     );
+    public function getPDFPages() {
+        return $this->PDFPages;
+    }
     private $PDFPage = null;
+    public function getPDFPage() {
+        return $this->PDFPage;
+    }
+    /*
+     * Режим набора страниц. 
+     * inconsistent - означает, что после добавления новой страницы мы в любой 
+     *      момент можем обратиться к одной из предыдущих , чтобы ее дополнить.
+     *      Поэтому в таком режиме завершение страницы будет вызвано только 
+     *      при завершении всего документа
+     * consistent - означает, что после добавления новой страницы мы уже не можем 
+     *      вернуться ни к одной из предыдущих для их дополнения
+     */
+    private $pageCollectingMode = 'inconsistent';
     
-    public function __construct() {
+    public $numeratePages = true;
+    
+    public function __construct($addNewPage = true) {
         parent::__construct();
-        $this->AddPage(self::$orientation, self::$pageSize);
+        $addNewPage && $this->AddPage(self::$orientation, self::$pageSize);
+    }
+    
+    function AddPage($orientation='', $size='', $rotation=0)
+    {
+        // Start a new page
+        if($this->state==3)
+            $this->Error('The document is closed');
+        $family = $this->FontFamily;
+        $style = $this->FontStyle.($this->underline ? 'U' : '');
+        $fontsize = $this->FontSizePt;
+        $lw = $this->LineWidth;
+        $dc = $this->DrawColor;
+        $fc = $this->FillColor;
+        $tc = $this->TextColor;
+        $cf = $this->ColorFlag;
+        if($this->page>0 && strtolower($this->pageCollectingMode) !== 'inconsistent')
+        {
+            // Page footer
+            $this->InFooter = true;
+            $this->Footer();
+            $this->InFooter = false;
+            // Close page
+            $this->_endpage();
+        }
+        // Start new page
+        $this->_beginpage($orientation,$size,$rotation);
+        // Set line cap style to square
+        $this->_out('2 J');
+        // Set line width
+        $this->LineWidth = $lw;
+        $this->_out(sprintf('%.2F w',$lw*$this->k));
+        // Set font
+        if($family)
+            $this->SetFont($family,$style,$fontsize);
+        // Set colors
+        $this->DrawColor = $dc;
+        if($dc!='0 G')
+            $this->_out($dc);
+        $this->FillColor = $fc;
+        if($fc!='0 g')
+            $this->_out($fc);
+        $this->TextColor = $tc;
+        $this->ColorFlag = $cf;
+        // Page header
+        $this->InHeader = true;
+        $this->Header();
+        $this->InHeader = false;
+        // Restore line width
+        if($this->LineWidth!=$lw)
+        {
+            $this->LineWidth = $lw;
+            $this->_out(sprintf('%.2F w',$lw*$this->k));
+        }
+        // Restore font
+        if($family)
+            $this->SetFont($family,$style,$fontsize);
+        // Restore colors
+        if($this->DrawColor!=$dc)
+        {
+            $this->DrawColor = $dc;
+            $this->_out($dc);
+        }
+        if($this->FillColor!=$fc)
+        {
+            $this->FillColor = $fc;
+            $this->_out($fc);
+        }
+        $this->TextColor = $tc;
+        $this->ColorFlag = $cf;
+    }
+    
+    function Close()
+    {
+        if (strtolower($this->pageCollectingMode) === 'inconsistent') {
+            /*
+             * В данном режиме у нас страницы при начале новой не завершались и нужно 
+             * их завершить принудительно
+             */
+            $maxIndex = -1;
+            foreach ($this->pages as $k => $page) {
+                $this->page = $k;
+                $this->Footer();
+                $k > $maxIndex && ($maxIndex = $k);
+            }
+            
+            /*
+             * Чтобы родительский метод отработал правильно, нужно сменить режим
+             * и выставить правильный $this->page
+             */
+            $this->page = $maxIndex;
+            $this->pageCollectingMode = 'consistent';
+        }
+        parent::Close();
     }
     
     function Header() {
@@ -41,10 +158,10 @@ class PDF extends FPDF {
         $this->Image('./pict/logotype.png', self::$padding, self::$padding, self::$logoSize, self::$logoSize);
         $this->SetFont(self::$fontName, '', self::$headerFontSize);
         $x = self::$padding + self::$logoSize + self::$imgPadding;
-        $y = self::$padding + self::PointsToMM(self::$headerFontSize) + 3;
-        $this->Text($x, $y, 'US Global Motors Corp. Exporting & Logistics Worldwide');
-        $y = self::PointsToMM(self::$headerFontSize) * 2 + self::$padding + 8;
-        $this->Text($x, $y, 'CFO/Financial Director Andrey Gordienko');
+        $y = self::$padding + self::PointsToMM(self::$headerFontSize);
+        $this->Text($x, $y, 'US Global Motors Corp.');
+        $y = self::PointsToMM(self::$headerFontSize) * 2 + self::$padding + 2;
+        $this->Text($x, $y, 'Worldwide US Exporter');
         $_y = self::$padding + self::$logoSize + self::$imgPadding;
         $this->top = $_y > $y ? $_y : $y;
         $this->topColontitleHeight = $this->top;
@@ -68,15 +185,15 @@ class PDF extends FPDF {
     function Footer() {
         $this->SetFont(self::$fontName, '', self::$footerFontSize);
         $y = $this->getPageHeight() - self::$padding - self::$footerIconSize;
-        $this->Image('./pict/web.png', self::$padding, $y, self::$footerIconSize, self::$footerIconSize);
-        $this->Image('./pict/phone.png', self::$padding + intdiv($this->getPageWidth(), 2), $y, self::$footerIconSize, self::$footerIconSize);
+        // $this->Image('./pict/web.png', self::$padding, $y, self::$footerIconSize, self::$footerIconSize);
+        // $this->Image('./pict/phone.png', self::$padding + intdiv($this->getPageWidth(), 2), $y, self::$footerIconSize, self::$footerIconSize);
         
         $y = $this->getPageHeight() - self::$padding - self::$footerIconSize / 3;
         $x = self::$padding + self::$footerIconSize + self::$imgPadding / 2;
         $this->Text($x, $y, 'www.usglobalmotors.com');
         
         $x = self::$padding + intdiv($this->getPageWidth(), 2) + self::$footerIconSize + self::$imgPadding / 2;
-        $this->Text($x, $y, '+79161875227');
+        $this->Text($x, $y, 'info@usglobalmotors.com');
     }
     
     function printLotHeader($text) {
@@ -85,14 +202,14 @@ class PDF extends FPDF {
         $this->SetFont(self::$fontName, '', $fontSize);
         $maxWidth = $this->PDFPage->workAreaRight;
         $x = $this->PDFPage->left;
-        $y = $this->PDFPage->top + self::PointsToMM($fontSize) + 6;
+        $y = $this->PDFPage->top + self::PointsToMM($fontSize) + 2;
         for($i = 0; $i < strlen($text); ++$i) {
             $char = $text[$i];
             $wChar = $this->GetStringWidth($char);
             
             if ($x + $wChar >= $maxWidth) {
                 $x = $this->PDFPage->left;
-                $y += self::PointsToMM($fontSize) + 6;
+                $y += self::PointsToMM($fontSize);
             }
             $this->Text($x, $y, $char);
             $x += $wChar;
@@ -102,7 +219,6 @@ class PDF extends FPDF {
     }
     
     function printImages($images) {
-        
         if (
                 !$images ||
                 gettype($images) !== gettype(array()) ||
@@ -113,20 +229,33 @@ class PDF extends FPDF {
             return false;
         }
         /*
-         * Печать параметров начинается с самого первого листа
+         * Печать изображений начинается с самого первого листа
          */
         $this->setPage(0);
+        $areas = array(
+            $this->PDFPage->Index() => array(
+            'page' => NULL,
+            'area' => array(
+                'top' => 0,
+                'right' => 0,
+                'bottom' => 0,
+                'left' => 0
+            )
+        ));
+        $areas[$this->PDFPage->Index()]['page'] = $this->PDFPage;
+        $areas[$this->PDFPage->Index()]['area']['left'] = $this->PDFPage->left;
+        $areas[$this->PDFPage->Index()]['area']['top'] = $this->PDFPage->top;
         /*Сначала получим главное изображение*/
         $mainImg = (new linq($images))->first(function($img){
-            return $img['IsMain'] === true;
+            return $img['IsMain'] === 1;
         });
         !$mainImg && ($mainImg = $images[0]);
-        
         
         /*Определим параметры для печати главного изображения*/
         $printW = $this->PDFPage->getCenter('x') - $this->PDFPage->workAreaLeft - 2;
         $printH = floor($mainImg['Height'] * ($printW / $mainImg['Width']));
         $maxX = $this->PDFPage->getCenter('x') - 2;
+        $areas[$this->PDFPage->Index()]['area']['right'] = $maxX;
         
         $this->Image(
             $mainImg['FileName'], 
@@ -138,6 +267,7 @@ class PDF extends FPDF {
         
         $y = $this->PDFPage->top + $printH + 2 * self::$thumbPaddingV;
         $x = $this->PDFPage->left;
+        $areas[$this->PDFPage->Index()]['area']['bottom'] = $y;
         
         $thumbMaxH = 0;
         
@@ -145,11 +275,16 @@ class PDF extends FPDF {
         
         for ($i = 0; $i < count($images); ++$i) {
             $img = $images[$i];
-            if ($img['IdImage'] === $mainImg['IdImage']) {
-                continue;
-            }
+//            if ($img['IdImage'] === $mainImg['IdImage']) {
+//                continue;
+//            }
             
             $thumbH = floor($img['Height'] * ($thumbW / $img['Width']));
+            if ($thumbH > $thumbMaxH) {
+                $thumbMaxH = $thumbH;
+                /*Запоминаем на данном листе нижнюю границу области, занятой картинками*/
+                $areas[$this->PDFPage->Index()]['area']['bottom'] = $y + $thumbMaxH;
+            }
             $thumbMaxH = $thumbH > $thumbMaxH ? $thumbH : $thumbMaxH;
             
             if ($x + $thumbW + self::$thumbPaddingH > $maxX) {
@@ -157,7 +292,7 @@ class PDF extends FPDF {
                 $y += $thumbMaxH + self::$thumbPaddingV;
                 /*А абсциссу ставим на начало строки*/
                 $x = $this->PDFPage->workAreaLeft;
-                /*Т.к. строка новая, то в ней еще не известна максимальная высота изображения*/
+                /*Т.к. начинается новая строка, то в ней еще не известна максимальная высота изображения*/
                 $thumbMaxH = 0;
             }
             if ($y + $thumbH > $this->PDFPage->workAreaBottom) {
@@ -167,13 +302,29 @@ class PDF extends FPDF {
                     $this->setPage($nextIndex);
                 }
                 else {
-                    $this->AddPage(self::$orientation, self::$pageSize);
+                    $this->AddPage(self::$orientation, self::$pageSize, 0, false);
+                }
+                if (!array_key_exists($this->PDFPage->Index(), $areas)) {
+                    $areas[$this->PDFPage->Index()] = array(
+                        'page' => NULL,
+                        'area' => array(
+                            'top' => 0,
+                            'right' => 0,
+                            'bottom' => 0,
+                            'left' => 0
+                        )
+                    );
+                    $areas[$this->PDFPage->Index()]['page'] = $this->PDFPage;
+                    $areas[$this->PDFPage->Index()]['area']['left'] = $this->PDFPage->left;
+                    $areas[$this->PDFPage->Index()]['area']['top'] = $this->PDFPage->top;
+                    $areas[$this->PDFPage->Index()]['area']['right'] = $maxX;
+                    /*На новой странице bottom = top, пока не будут добавлены данные*/
+                    $areas[$this->PDFPage->Index()]['area']['bottom'] = $this->PDFPage->top;
                 }
                 /*При переходе на следующий лист координаты для печати ставим в верхний левый угол рабочей области страницы*/
                 $y = $this->PDFPage->workAreaTop;
                 $x = $this->PDFPage->workAreaLeft;
             }
-            
             
             $this->Image(
                 $img['FileName'], 
@@ -185,10 +336,9 @@ class PDF extends FPDF {
             
             /*После печати очередного изображения сдвигаем абсциссу*/
             $x += $thumbW + self::$thumbPaddingH;
-            
         }
         
-        return true;
+        return $areas;
     }
     
     /*Функция получает соотношение сторон изображения для сохранения пропорций при печати*/
@@ -200,7 +350,7 @@ class PDF extends FPDF {
         return $ratio;
     }
     
-    function printParams($params) {
+    function printParams($params, $pageIndex = null) {
         if (
                 !$params ||
                 gettype($params) !== gettype(array()) ||
@@ -214,27 +364,50 @@ class PDF extends FPDF {
          * Печать параметров начинается с самого первого листа
          */
         
-        $this->setPage(0);
+        $pageSide = 'l';
+        
+        $this->setPage($pageIndex !== null ? $pageIndex : 0);
         $pdf = $this;
-        $fontSize = self::$standFontSize * .7;
+        $fontSize = self::$standFontSize * .5;
         
         $this->SetFont(self::$fontName, '', $fontSize);
-        /*Определим  начальную абсциссу левой колонки*/
-        $leftColL = $this->PDFPage->getCenter('x') + 2;
-        /*Определим максимальную ширину области печати параметров лота*/
-        $maxWidth = $this->PDFPage->workAreaRight;
-        /*Определим  конечную абсциссу левой колонки*/
-        $leftColR = $leftColL + ceil(($maxWidth - $leftColL) / 2);
-        /*Определим  начальную абсциссу правой колонки*/
-        $rightColL = $leftColR + 10;
-        /*Определим  конечную абсциссу левой колонки*/
-        $rightColR = $this->PDFPage->workAreaRight;
+        $leftColL = $maxWidth = $leftColR = $rightColL = $rightColR = 0;
+        $getCoords = function($pageSide) use (&$leftColL, &$leftColR, &$rightColL, &$rightColR, &$maxWidth, $pdf){
+            if ( $pageSide === 'l') {
+
+                /*Определим  начальную абсциссу левой колонки*/
+                $leftColL = $pdf->PDFPage->workAreaLeft;
+                /*Определим максимальную ширину области печати параметров лота*/
+                $maxWidth = $pdf->PDFPage->getCenter('x') - 2;
+                /*Определим  конечную абсциссу левой колонки*/
+                $leftColR = $leftColL + ceil(($maxWidth - $leftColL) * .3);
+                /*Определим  начальную абсциссу правой колонки*/
+                $rightColL = $leftColR + 10;
+                /*Определим  конечную абсциссу левой колонки*/
+                $rightColR = $pdf->PDFPage->getCenter('x') - 2;
+            }
+            else {
+
+                /*Определим  начальную абсциссу левой колонки*/
+                $leftColL = $pdf->PDFPage->getCenter('x') + 2;
+                /*Определим максимальную ширину области печати параметров лота*/
+                $maxWidth = $pdf->PDFPage->workAreaRight;
+                /*Определим  конечную абсциссу левой колонки*/
+                $leftColR = $leftColL + ceil(($maxWidth - $leftColL) * .3);
+                /*Определим  начальную абсциссу правой колонки*/
+                $rightColL = $leftColR + 10;
+                /*Определим  конечную абсциссу левой колонки*/
+                $rightColR = $pdf->PDFPage->workAreaRight;
+            }
+        };
+        $getCoords($pageSide);
+        
         /*Определим интервал для строки*/
-        $lineInterval = self::PointsToMM($fontSize) + 5;
+        $lineInterval = self::PointsToMM($fontSize) + 2;
         /*Определим максимальную нижнюю границу для размещения данных*/
         $maxBottom = $this->PDFPage->workAreaBottom - $lineInterval;
         
-        $printChar = function($char, &$x, &$y, $maxWidth, $defX) use ($pdf, $fontSize, $lineInterval){
+        $printChar = function($char, &$x, &$y, $maxWidth, $defX) use ($pdf, $lineInterval){
             $wChar = $pdf->GetStringWidth($char);
             
             if ($x + $wChar >= $maxWidth) {
@@ -272,24 +445,46 @@ class PDF extends FPDF {
             $yVal = ($yCap > $yVal ? $yCap : $yVal) +  $lineInterval;
             $yCap = $yVal;
             if ($yCap >= $maxBottom) {
-                /*Переходим на новый лист*/
-                $nextIndex = $this->PDFPage->Index() + 1;
-                if (array_key_exists($nextIndex, $this->PDFPages)) {
-                    $this->setPage($nextIndex);
+                if ($pageSide === 'r') {
+                    $pageSide = 'l';
+                    /*Переходим на новый лист*/
+                    $nextIndex = $this->PDFPage->Index() + 1;
+                    if (array_key_exists($nextIndex, $this->PDFPages)) {
+                        $this->setPage($nextIndex);
+                    }
+                    else {
+                        $this->AddPage(self::$orientation, self::$pageSize, 0, false);
+                    }
                 }
                 else {
-                    $this->AddPage(self::$orientation, self::$pageSize);
+                    $pageSide = 'r';
                 }
                 $yVal = $this->PDFPage->workAreaTop;
                 $yCap = $this->PDFPage->workAreaTop;
+                $getCoords($pageSide);
             }
         }
+        
         return true;
     }
     
-    private static function PointsToMM($points) {
+    public function FinishedDocument() {
+        if ($this->numeratePages) {
+            $count = count($this->PDFPages);
+            for ($i = 0; $i < $count; ++$i) {
+                $this->setPage($i);
+                $this->SetFont(self::$fontName, '', self::$headerFontSize);
+                $x = $this->PDFPage->workAreaRight - self::$padding - 15;
+                $y = self::$padding - self::PointsToMM(self::$headerFontSize);
+                $this->Text($x, $y, 'Page ' . ($i + 1) . ' of ' . $count);
+            }
+        }
+    }
+
+
+    public static function PointsToMM($points) {
         /*1 point = 1/72 "*/
-        return ceil($points / 72);
+        return ceil($points / 72 * 25.4);
     }
     
     private function _setFillColor($fillColor) {
@@ -326,10 +521,46 @@ class PDF extends FPDF {
         $index = $index < 0 ? 0 : $index >= count($this->PDFPages) ? count($this->PDFPages) : $index;
         $this->page = $index + 1;
         $this->PDFPage = $this->PDFPages[$index];
+        $this->state = 2;
     }
     
     public function pageExists($index) {
         return $index >= 0 && array_key_exists($index, $this->PDFPages);
+    }
+    
+    public static function getStandartLotPDFFileName($lot) {
+        $saleDate = '';
+        $manufactYear = '';
+        $maker = '';
+        $model = '';
+        $lotKey = '';
+        $getSD = function($dt){
+            $res = '';
+            if ($dt) {
+                if (gettype($dt) == gettype('aaa')) {
+                    $dt = new DateTime($dt);
+                }
+                $res = $dt->format('Y-m-d') . ' ';
+            }
+            return $res;
+        };
+        if (is_array($lot)) {
+            $saleDate = $getSD($lot['SaleDate']);
+            $manufactYear = $lot['ManufactYear'] . ' ';
+            $maker = base64_decode($lot['Maker']) . ' ';
+            $model = base64_decode($lot['Model']) . ' ';
+            $lotKey = $lot['Key'] . ' ';
+        }
+        else if (is_object($lot)) {
+            $saleDate = $getSD($lot->SaleDate);
+            $manufactYear = $lot->ManufactYear . ' ';
+            $maker = base64_decode($lot->Maker) . ' ';
+            $model = base64_decode($lot->Model) . ' ';
+            $lotKey = $lot->Key . ' ';
+        }
+        $fName = preg_replace('/\s+/', ' ', trim($saleDate . $manufactYear . $maker . $model .$lotKey));
+        $fName = preg_replace('/[^\w\d\s,._()-]/', ' ', $fName);
+        return $fName . '.pdf';
     }
     
     
@@ -356,18 +587,6 @@ class PDFPage {
     public function Index () {
         return $this->index;
     }
-//    private function _switchPdfToPageNo() {
-//        $this->pdf->setPage($this->index);
-//    }
-//    public function Text($x, $y, $txt) {
-//        $this->_switchPdfToPageNo();
-//        $this->pdf->Text($x, $y, $txt);
-//    }
-//    public function Image($file, $x=null, $y=null, $w=0, $h=0, $type='', $link='') {
-//        $this->_switchPdfToPageNo();
-//        $this->pdf->Image($file, $x, $y, $w, $h, $type, $link);
-//        
-//    }
     public function getCenter($coord) {
         if (strtolower($coord) === 'y') {
             return floor($this->workAreaBottom - ($this->workAreaBottom - $this->workAreaTop) / 2);

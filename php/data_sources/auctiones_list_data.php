@@ -23,15 +23,16 @@ $auctiones_params = (new linq($db->auction_params->getRows()))
             array_key_exists($key, $el) && 
             $el[$key] !== null;
     })
-    ->toAssoc(function($el){
-        return $el['IdAuction'];
-    })
     ->for_each(function(&$el){
         foreach ($el as &$v) {
             gettype($v) === gettype('') && ($v = base64_encode($v));
         }
     })
+    ->groupBy(function($el){
+        return $el['IdAuction'];
+    })
     ->getData();
+
 /*Сформируем список аукционов*/
 echo json_encode(
     (new linq($db->auctiones->getRows()))

@@ -6,15 +6,27 @@ function postMessager(data) {
     }
     var _data = {data: data.data, original: data};
     if (typeof data.data === typeof 'aaa') {
-        _data.data = JSON.parse(data.data);
+        try {
+            _data.data = JSON.parse(data.data);
+        } catch (e) {
+            console.log('JSON parse error ', data.data);
+            throw 'Не удалось преобразовать данные из строки в формат JSON. Данные: ' + data.data;
+        }
+    }
+    var context = window;
+    if (_data.data.contextCallback) {
+        var context = _data.data.contextCallback.split('.');
+        context = linq(context).reduce(function(res, key){
+            if (res && key in res) {
+                res = res[key];
+            }
+            return res;
+        }, window);
+        
     }
     /*Вычисляем callback*/
     if (_data.data.callback) {
         var callback = _data.data.callback.split('.');
-        var context = window;
-        if (callback.length > 1) {
-            context = window[callback[0]];
-        }
         callback = linq(callback).reduce(function(res, key){
             if (res && key in res) {
                 res = res[key];
@@ -33,3 +45,4 @@ if (window.addEventListener) {
 else {
     window.attachEvent('onMessage', postMessager);
 }
+

@@ -23,6 +23,8 @@
     box-shadow: #ccc 3px 3px 5px;
     margin-top: 25px;
     padding-left: 45px;
+    z-index: 2;
+    background-color: white;
 }
 
 
@@ -95,5 +97,32 @@
 
 .filter-panel .filter-apply-btn {
     cursor: pointer;
+    font-size: 150%;
+    padding: .2em 2em;
+    margin-bottom: 10px;
+}
+
+.filter-panel .filter-options {
+    text-align: center;
+    vertical-align: top;
+    position: relative;
+    border: 1px solid #ddd;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    -o-border-radius: 6px;
+    -ms-border-radius: 6px;
+    border-radius: 6px;
+    box-shadow: #ccc 0px 3px 5px;
+    padding: 10px;
+    margin: 0% 10%;
+    margin-top: -5px;
+    z-index: 1;
+}
+
+.filter-panel .filter-options .filter-option {
+    display: inline-block;
+    margin-right: 30px;
+    cursor: pointer;
+    max-width: 40px;
     max-height: 40px;
 }

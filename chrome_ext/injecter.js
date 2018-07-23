@@ -2,6 +2,7 @@
 
 
 function injectScript(file, node) {
+    
     var th = document.getElementsByTagName(node)[0];
     var s = document.createElement('script');
     s.setAttribute('type', 'text/javascript');
@@ -14,9 +15,10 @@ var mode = null;
 if (/^https?:\/\/[^\/]*(copart|iaai)/i.test(document.location.href)) {
     mode = 'auction_site';
 }
-else if (/^https?:\/\/[^\/]*gordienko/i.test(document.location.href)) {
+else if (/^https?:\/\/[^\/]*(gordienko|usgm)/i.test(document.location.href)) {
     mode = 'root_site';
 }
+
 if (mode !== null) {
     /*Устанавливаем возможность обмена сообщениями между окнами*/
     injectScript(chrome.extension.getURL('/postmessager.js'), 'body');

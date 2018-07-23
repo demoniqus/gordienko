@@ -11,7 +11,7 @@ $getVIN = function($v, $k){
 };
 $getSaleDate = function($v, $k){ 
     $k = strtolower($k);
-    return strpos($k, 'sale') !== false && strpos($k, 'date') !== false;
+    return strpos($k, 'auction') !== false && strpos($k, 'date') !== false;
 };
 $getMaker = function($v, $k){ 
     $k = strtolower($k);
@@ -74,6 +74,8 @@ else {
     );
 }
 
+
+
 /*Запишем полученные значения параметров лота в БД*/
 if (
         $paramsValues !== null && 
@@ -115,42 +117,74 @@ if (
     /*
      * Теперь имеются идентификаторы всех параметров и можно сохранять значения
      */
-    (new linq($paramsValues))->for_each(function($v, $k) use ($auct_params, $auction, $db, $lot){
+    
+    (new linq($paramsValues))->for_each(function($v, $k) use ($auct_params, $auction, $db, $lot, &$report){
+        
         /*Проверим, не было ли еще записано какое-либо значение для данного параметра для данного лота*/
         $param = $auct_params[$k];
         $pv = $db->lot_params_values->getFirstRow('`IdLot`=' . $lot['IdLot'] . ' AND `IdParam`=' . $param['IdParam']);
         if ($v !== null && gettype($v) === gettype(array())) {
             $v = serialize($v);
         }
+        $r = array (
+            'valueKey' => $k,
+            'value' => $v,
+            'pv' => $pv,
+            'param' => $param
+        );
         if ($pv === null) {
+            if ($v === null || !preg_replace('/[\s\.,_;\?<>\*+-]/', '', $v)) {
+                /*Пустые значения не сохраняем*/
+                return;
+            }
             $pv = $db->lot_params_values->getEmptyEntity();
             $pv['Value'] = $v;
             $pv['IdLot'] = $lot['IdLot'];
             $pv['IdParam'] = $param['IdParam'];
-            $db->lot_params_values->Insert($pv);
+            $r['newPV'] = $db->lot_params_values->Insert($pv);
         }
         else {
-            $pv['Value'] = $v;
-            $db->lot_params_values->Update($pv);
+            if ($v === null || !preg_replace('/[\s\.,_;\?<>\*+-]/', '', $v)) {
+                /*Пустые значения не сохраняем*/
+                $db->lot_params_values->Delete($pv);
+            }
+            else {
+                $pv['Value'] = $v;
+                $r['updatedPV'] = $db->lot_params_values->Update($pv);
+            }
         }
+        $report[] = $r;
     });
 
     /*Обновим VIN, дату продажи, марку, модель, год выпуска лота*/
     $updatedData = array();
     $saleDate = (new linq($paramsValues))->first($getSaleDate);
     if (
-            $saleDate !== null && 
+            $saleDate !== null
+        ) {
+                
+        if (
             gettype($saleDate) === gettype(array()) &&
             gettype($saleDate = (new linq($saleDate))->first(function($v, $k){ return strtolower($k) === 'dateasint';})) === gettype(1111)
-        ) {
+            ) {
 
-        $saleDate = $saleDate . '';
-        if ( preg_match('/^2\d{3}[0-1][0-9][0-3][0-9]$/i', $saleDate) === 1) {
-            $saleDate = substr($saleDate, 0, 4) . '-' . 
-                    substr($saleDate, 4, 2) . '-' . 
-                    substr($saleDate, 6, 2) . ' 00:00:00'; 
+            $saleDate = $saleDate . '';
+            if ( preg_match('/^2\d{3}[0-1][0-9][0-3][0-9]$/i', $saleDate) === 1) {
+                $saleDate = substr($saleDate, 0, 4) . '-' . 
+                        substr($saleDate, 4, 2) . '-' . 
+                        substr($saleDate, 6, 2) . ' 00:00:00'; 
+                $updatedData['SaleDate'] = $saleDate;
+
+            }
+        } 
+        else if (
+                gettype($saleDate) === gettype('aaa') &&
+                preg_match('/^[0-1][0-9][0-3][0-9]2\d{3}$/i', $saleDate) === 1
+            ) {
+            $saleDate = substr($saleDate, 4, 4) . '-' . 
+                    substr($saleDate, 0, 2) . '-' . 
+                    substr($saleDate, 2, 2) . ' 00:00:00'; 
             $updatedData['SaleDate'] = $saleDate;
-
         }
     }
     $VIN = (new linq($paramsValues))->first($getVIN);
@@ -195,7 +229,7 @@ if ($isFound !== false) {
      * Значения параметров лота сохранены. Теперь выкачиваем изображения.
      */
     $images = array();
-    
+    /*Сначлала получим список изображений*/
     if ($auction['SyncFromFrame'] || $auction['SyncFromPopupWindow']) {
         $images = $_POST['lotImages'];
     }
@@ -206,7 +240,7 @@ if ($isFound !== false) {
 
         $pathToImage = array('data', 'imagesList');
 
-        $iamges = (new linq($pathToImage))->reduce(function($images, $key){
+        $images = (new linq($pathToImage))->reduce(function($images, $key){
             if ($images !== null) {
                 if (gettype($images) === gettype(array())) {
                     if (
@@ -236,7 +270,7 @@ if ($isFound !== false) {
             }
         }, $images);
 
-        if ($images !== null) {
+        if ($images !== null && array_key_exists(gettype($images), array( gettype(array()) => null, 'object' => null))) {
             /*Отбираем ссылки на полноразмерные картинки*/
             $images = (new linq($images[$key]))
                 ->where(function($image){
@@ -247,72 +281,107 @@ if ($isFound !== false) {
         }
     }
     
-    $report = array();
-    if ($images !== null) {
+    
+    if ($images !== null && array_key_exists(gettype($images), array( gettype(array()) => null, 'object' => null))) {
         /*
          * Копируем папку для хранения изображений
          */
-
-        FileSystem::copyDir(
-           '.' . DIRECTORY_SEPARATOR . $pictStorage, 
-           '.' . DIRECTORY_SEPARATOR . GlobalVars::$lotDataDir . DIRECTORY_SEPARATOR . $pictStorage
-        );
+        if (file_exists('.' . DIRECTORY_SEPARATOR . $pictStorage)) {
+            FileSystem::copyDir(
+                '.' . DIRECTORY_SEPARATOR . $pictStorage, 
+                targetDirectory($pictStorage)
+            );
+        }
+        else {
+            FileSystem::createDir( 
+                targetDirectory($pictStorage)
+            );
+        }
         /*
         * Определяем путь для сохранения изображений
         */
-        $storagePath = '.' . DIRECTORY_SEPARATOR . GlobalVars::$lotDataDir . DIRECTORY_SEPARATOR . $pictStorage;
+        $storagePath = targetDirectory($pictStorage);
+        
+        /*
+         * Метод для определения префикса графического файла
+         * Префикс используется для вновь создаваемого лота или 
+         * при принудительной пересинхронизации
+         */
+        $usefNamePrefix = $IsNewLot || $forceSync;
+        $fNamePrefixIndex = 1;
+        $nextfNamePrefix = function() use ($usefNamePrefix, &$fNamePrefixIndex){
+            if (!$usefNamePrefix) {
+                return '';
+            }
+            $prefix = strval($fNamePrefixIndex++);
+            while (strlen($prefix) < 3) {
+                $prefix = '0' . $prefix;
+            }
+            return $prefix . '_';
+        };
 
-        (new linq($images))->for_each(function($image_source) use ($db, $lot, $storagePath, $pictStorage, &$report){
+        (new linq($images))->for_each(function($image_source) 
+                use ($db, $lot, $storagePath, $pictStorage, &$report, $nextfNamePrefix){
 
-           $key = 'url';
-           if  (!array_key_exists($key, $image_source) || $image_source[$key] == null ) {
-               /*Видимо, изменилась структура данных и нужно указывать новый ключ для выборки источника картинки*/
-               return;
-           }
-           $url = $image_source[$key];
-           $report[] = 'load image from ' . $url;
-           /*Проверим, нет ли еще данной картинки в БД*/
-           if ($db->lot_images->getFirstRow('`OrigName`=\'' . base64_encode($url) . '\' && `IdLot`=' . $lot['IdLot']) === null) {
-               $report[] = 'Image ' . $url . ' yet not exists';
-               /*Если такой картинки еще нет, загрузим ее*/
-               /*Определим имя, под которым сохраним изображение в хранилище*/
-               $fileName = basename($url);
-               try {
-                   $urlInstance = new URL();
-                   $urlInstance->setOption(CURLOPT_HEADER, 0);
-                   $urlInstance->setOption(CURLOPT_RETURNTRANSFER, 1);
-                   $urlInstance->setOption(CURLOPT_BINARYTRANSFER, 1);
-                   $fileContent = $urlInstance->getURLContent($url);
-                   $report[] = 'Get image data';
-                   $handle = fopen($storagePath . DIRECTORY_SEPARATOR . $fileName, 'wb');
-                   $report[] = 'Try to write image data to file ';
-                   if (fwrite($handle, $fileContent[0]) != false) {
-                       /*Сразу определим размеры изображения для использования в будущем при показе*/
-                       $image_info = getimagesize($storagePath . DIRECTORY_SEPARATOR . $fileName);
-                       /*Запись на диск произведена успешно. Теперь делаем запись в БД*/
-                       $report[] = 'Try to create record to database ';
-                       $db->lot_images->Insert($db->lot_images->getEmptyEntity(array(
-                           'OrigName' => base64_encode($url),
-                           'FileName' => base64_encode($pictStorage . DIRECTORY_SEPARATOR . $fileName),
-                           'IdLot' => $lot['IdLot'],
-                           'Visible' => true,
-                           'IsMain' => 0,
-                           'Width' => $image_info[0],
-                           'Height' => $image_info[1]
-                       )));
-                   }
-                   else {
-                       $report[] = 'Fail to write image data to file';
-                   }
-               } catch (Exception $ex) {
-               }
+            $key = 'url';
+            if  (!array_key_exists($key, $image_source) || $image_source[$key] == null ) {
+                /*Видимо, изменилась структура данных и нужно указывать новый ключ для выборки источника картинки*/
+                return;
+            }
+            $url = $image_source[$key];
+            $condition = '`IdLot`=' . $lot['IdLot'] . ' AND (`OrigName`=\'' 
+                . base64_encode($url) . '\' OR `OrigName`=\'' . base64_encode(basename($url)) . '\')';
+            /*Проверим, нет ли еще данной картинки в БД*/
+            if ($db->lot_images->getFirstRow($condition) === null) {
+                /*Если такой картинки еще нет, загрузим ее*/
+                /*Определим имя, под которым сохраним изображение в хранилище*/
+                $fileName = $nextfNamePrefix() . basename($url);
+                try {
+                    $urlInstance = new URL();
+                    $urlInstance->setOption(CURLOPT_HEADER, 0);
+                    $urlInstance->setOption(CURLOPT_RETURNTRANSFER, 1);
+                    $urlInstance->setOption(CURLOPT_BINARYTRANSFER, 1);
+                    $fileContent = $urlInstance->getURLContent($url);
+                    /*
+                     * На случай, если что-то пойдет не по плану при закачке изображения,
+                     * ограничим минимальный размер
+                     */
+                    if (strlen($fileContent[0]) > GlobalVars::$minPictureUploadSize) {
+                        $handle = fopen($storagePath . DIRECTORY_SEPARATOR . $fileName, 'wb');
+                        if (fwrite($handle, $fileContent[0]) != false) {
+                            /*Сразу определим размеры изображения для использования в будущем при показе*/
+                            $image_info = getimagesize($storagePath . DIRECTORY_SEPARATOR . $fileName);
+                            /*Запись на диск произведена успешно. Теперь делаем запись в БД*/
+                            $db->lot_images->Insert($db->lot_images->getEmptyEntity(array(
+                                'OrigName' => base64_encode($url),
+                                'FileName' => base64_encode($pictStorage . DIRECTORY_SEPARATOR . $fileName),
+                                'IdLot' => $lot['IdLot'],
+                                'Visible' => true,
+                                'IsMain' => 0,
+                                'Width' => $image_info[0],
+                                'Height' => $image_info[1]
+                            )));
+                        }
+                        else {
+                            try {
+                                /*Удаляем пустой файл, в который не удалось произвести запись*/
+                                unlink($storagePath . DIRECTORY_SEPARATOR . $fileName);
+                            } catch (Exception $ex) {
+
+                            }
+                        }
+                    }
+                    else {
+                    }
+                } catch (Exception $ex) {
+                }
             }
         });
     }
 }
 /*выводим метку, что процесс обновления данного лота завершен*/
 if ($isFound !== false) {
-    echo '{"syncStatus":true,"debug":' . json_encode($images) . ',"report":' . json_encode($report) . '}';
+    echo '{"syncStatus":true,"report":' . json_encode($report) . '}';
 }
 else {
     echo '{"syncStatus":false,"message":"В источнике нет данных для лота ' . $lot['Key'] . '","key":"' . base64_encode($lot['Key']) . '"}';

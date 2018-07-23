@@ -11,27 +11,55 @@ filter = function(params){
             
             var style = '';
             var conte = $(
-                '<div class="filter-panel"><div class="filter-fields"></div>' + 
-                '<div class="filter-label"><img src="pict/filter_128.png" /></div></div>'
+                '<div class="filter-panel"></div>'
             );
             
-            var c = conte.find('.filter-fields:first');
-            for (var i in this.params.fields) {
-                var field = this.params.fields[i];
-                c.append(this['getFilterForm_' + field.type.toLowerCase()](field));
+            var _self = this;
+            if (this.params.fields) {
+                conte.append('<div class="filter-fields"></div>' + 
+                    '<div class="filter-label"><img src="pict/filter_128.png" /></div>');
+                var c = conte.find('.filter-fields:first');
+                for (var i in this.params.fields) {
+                    var field = this.params.fields[i];
+                    c.append(this['getFilterForm_' + field.type.toLowerCase()](field));
+                }
+                var div = $('<div style="text-align: center; margin-top: 10px;"></div>');
+                var applyBtn = $('<a class="filter-apply-btn apply-btn" >Применить</a>');
+
+                div.append(applyBtn);
+                c.append(div);
+                
+                applyBtn.click(function(){
+                    _self.change();
+                });
             }
             
-            var div = $('<div style="text-align: center; margin-top: 10px;"></div>');
-            var applyBtn = $('<img class="filter-apply-btn" src="pict/apply-btn.png" />');
+            if (this.params.options) {
+                conte.append('<div class="filter-options"></div>');
+                var div = conte.find('.filter-options:first');
+                for (var i in this.params.options) {
+                    var o = this.params.options[i];
+                    var el;
+                    if (o.element instanceof jQuery) {
+                        el = o.element;
+                    }
+                    else if (typeof o.element === typeof function(){}) {
+                        el = o.element();
+                    }
+                    else {
+                        el = $(o.element);
+                    }
+                    div.append(el);
+                    el.get(0)._filterOption = o;
+                    el.addClass('filter-option');
+                    el.click(function(){
+                        typeof function(){} === typeof this._filterOption.click && 
+                            this._filterOption.click.call(this, _self.clone(_self.value));
+                    });
+                }
+            }
             
-            div.append(applyBtn);
-            c.append(div);
             
-            
-            var _self = this;
-            applyBtn.click(function(){
-                typeof function(){} === typeof _self.params.change && _self.params.change(_self.clone(_self.value));
-            });
             
             this.htmlForm = conte;
             
@@ -64,6 +92,11 @@ filter = function(params){
             if (field.style && typeof {} === typeof field.style) {
                 for (var key in field.style) {
                     input.style[key] = field.style[key];
+                }
+            }
+            if (field.attributes && typeof {} === typeof field.attributes) {
+                for (var key in field.attributes) {
+                    input.setAttribute(key, field.attributes[key]);
                 }
             }
             
@@ -150,6 +183,48 @@ filter = function(params){
             
             return conte;
         },
+        getFilterForm_checkpoint: function(field){
+            var _self = this;
+            var conte = this.getBaseFilterForm(field);
+            conte.addClass('filter-checkpoint');
+            conte.append(this.getSelectField({
+                id: field.id_CPCSign,
+                elements: [
+                    {
+                        value: '=',
+                        caption: '='
+                    },
+                    {
+                        value: '<',
+                        caption: '<'
+                    },
+                    {
+                        value: '>',
+                        caption: '>'
+                    },
+                    {
+                        value: '<>',
+                        caption: '<>'
+                    },
+                    {
+                        value: '>=',
+                        caption: '>='
+                    },
+                    {
+                        value: '<=',
+                        caption: '<='
+                    }
+                ]
+            }));
+            /*Т.к. знак сравнения уже задан, тонужно его сразу прописать в хранилище*/
+            conte.find('select:first').change();
+            conte.append(this.getTextField({
+                id: field.id_CPValue,
+                attributes: field.attributes || null
+            }));
+            
+            return conte;
+        },
         getFilterForm_date: function(field){
             var conte = this.getBaseFilterForm(field);
             var _self = this;
@@ -170,9 +245,315 @@ filter = function(params){
             conte.find('.filter-field-value').append(input);
             
             return conte;
+        },
+        change: function(){
+            typeof function(){} === typeof this.params.change && this.params.change(this.clone(this.value));
         }
         
     };
     _self.getHTMLForm();
     return _self;
 };
+
+
+filterOptions = {
+    removeLotsByList: {
+        element: '<img src="pict/trash_red_round_128.png" title="Удалить лоты по списку"/>',
+        click: function(data){
+            var _self = this;
+            if (confirm('Вы уверены, что хотите удалить выбранные лоты без возможности их восстановления?')) {
+                $.ajax({
+                    url: 'index.php?mode=data&datakey=delete_objects',
+                    type: 'POST',
+                    data: {
+                        ObjectType: 'lot_list', 
+                        ObjectsIdList: linq(dataPanel.getItems())
+                            .select(function(item){ return item.params.IdLot;}).collection
+                    },
+                    success: function(data){
+                        _self.change();
+                    }
+                });
+            }
+        }
+    },
+    archiveLotsByList: {
+        element: '<img src="pict/to_archive_128.png" title="Архивировать лоты по списку"/>',
+        click: function(data){
+            if (confirm('Вы уверены, что хотите отправить выбранные лоты в архив?')) {
+                linq(dataPanel.getItems()).foreach(function(lot){
+                    lot.update('Archive', true);
+                });
+            }
+        }
+    },
+    unarchiveLotsByList: {
+        element: '<img src="pict/from_archive_128.png" title="Извлечь из архива лоты по списку"/>',
+        click: function(data){
+            if (confirm('Вы уверены, что хотите извлечь выбранные лоты из архива?')) {
+                linq(dataPanel.getItems()).foreach(function(lot){
+                    lot.update('Archive', false);
+                });
+            }
+        }
+    },
+    forcedGeneratePDFbyList: {
+        element: '<img src="pict/filetypes/pdffile.png" title="Заново сгенерировать PDF-файлы по списку лотов"/>',
+        click: function(data){
+            var parent = $(this).parents('.filter-options:first');
+            parent.find('.state-panel').remove();
+            var statePanel = $('<div class="state-panel"></div>');
+            if (confirm('Вы уверены, что хотите для выбранных лотов сгенерировать PDF-файлы заново, удалив без возможности восстановления ранее созданные файлы?')) {
+                linq(dataPanel.getItems()).foreach(function(lot){
+                    $.ajax({
+                        url: 'index.php?mode=data&datakey=lot_gen_pdf',
+                        type: 'POST',
+                        data: {IdLot: lot.params.IdLot},
+                        success: function(data){
+                            statePanel.html('Обработан лот ' + lot.Key);
+                        }
+                    });
+                    
+                });
+            }
+        }
+    },
+    viewTable: {
+        element: '<img src="pict/view_list.png" title="Табличный вид"/>',
+        click: function(data){
+            dataPanel.setViewMode('table');
+        }
+    },
+    viewTail: {
+        element: '<img src="pict/view_tail.png" title="Вид - плитки"/>',
+        click: function(data){
+            dataPanel.setViewMode('tail');
+        }
+    },
+    blockSplitter: {
+        element: '<div class="filter-blockoptions-splitter"></div>',
+        click: function(data){
+            return;
+        }
+    }
+    
+};
+
+filterFields = {
+    lot_VIN: {
+        caption: 'VIN',
+        type: 'text',
+        id: 'VIN'
+    },
+    lot_Key: {
+        caption: '№ лота',
+        type: 'text',
+        id: 'KeyLot'
+    },
+    lot_SaleDate: {
+        caption: 'Дата реализации',
+        type: 'dateinterval',
+        id: 'SaleDate'
+    },
+    lot_ImagesCount: {
+        caption: 'Количество изображений',
+        type: 'checkpoint',
+        id_CPCSign: 'ImagesCount_CSign',
+        id_CPValue: 'ImagesCount',
+        attributes: {
+            size: 4
+        }
+        
+    }
+};
+
+function allLotsListFilter(params) {
+    var lot_filter = new filter({
+        fields: [
+            filterFields.lot_VIN,
+            filterFields.lot_Key,
+            filterFields.lot_SaleDate,
+            {
+                caption: 'Аукцион',
+                type: 'singleselect',
+                id: 'IdAuction',
+                elements: [
+                    {
+                        caption: '',
+                        value: ''
+                    },
+                    {
+                        caption: 'COPART',
+                        value: 'copart'
+                    },
+                    {
+                        caption: 'IAAI',
+                        value: 'iaai'
+                    }
+                ]
+            },
+            filterFields.lot_ImagesCount
+        ],
+        change: function(data){
+            if (!data || !linq(data).firstKey(function(v,k){return true;})) {
+                return;
+            }
+            data.KeyLot && (data.KeyLot = Base64.encode(data.KeyLot));
+            data.VIN && (data.VIN = Base64.encode(data.VIN));
+            $.ajax({
+                url: 'index.php?mode=data&datakey=' + params.key,
+                type: 'POST',
+                data: {filter: data},
+                success: function(data){
+                    if (!data) {
+                        return;
+                    }
+                    try {
+                        data = JSON.parse(data.replace(/^\s+/ig, '').replace(/\s+$/ig, ''));
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    $(dataPanel).children('.category-item').remove();
+
+                    params.funcCtgrItemAppend(data, params.base_class, true);
+                }
+            });
+        },
+        options: [
+            filterOptions.removeLotsByList,
+            filterOptions.archiveLotsByList,
+            filterOptions.unarchiveLotsByList,
+            filterOptions.forcedGeneratePDFbyList,
+            filterOptions.blockSplitter,
+            filterOptions.viewTable,
+            filterOptions.viewTail
+            /*
+             * Создание лота здесь не реализую, поскольку без указания 
+             * аукциона неясно, какой список параметров брать
+             */
+        ]
+    });
+    
+    $(dataPanel).append(lot_filter.htmlForm);
+}
+
+function auctionLotsListFilter(auctionInstance) {
+    var lot_filter = new filter({
+        fields: [
+            filterFields.lot_VIN,
+            filterFields.lot_Key,
+            filterFields.lot_SaleDate,
+            filterFields.lot_ImagesCount
+        ],
+        change: function(data){
+            if (!data || !linq(data).firstKey(function(v,k){return true;})) {
+                return;
+            }
+            data.KeyLot && (data.KeyLot = Base64.encode(data.KeyLot));
+            data.VIN && (data.VIN = Base64.encode(data.VIN));
+            $.ajax({
+                url: 'index.php?mode=data&datakey=lots_list',
+                type: 'POST',
+                data: {
+                    filter: data,
+                    IdAuction: auctionInstance.params.IdAuction
+                },
+                success: function(data){
+                    if (!data) {
+                        return;
+                    }
+                    try {
+                        data = JSON.parse(data.replace(/^\s+/ig, '').replace(/\s+$/ig, ''));
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    $(dataPanel).children('.category-item').remove();
+
+                    auctionInstance.funcLotAppend(data);
+                    dataPanel.setViewMode()
+                }
+            });
+        },
+        options: [
+            filterOptions.removeLotsByList,
+            filterOptions.archiveLotsByList,
+            filterOptions.unarchiveLotsByList,
+            filterOptions.forcedGeneratePDFbyList,
+            {
+                element: '<img src="pict/camaro_add_128.png" title="Создать новый лот"/>',
+                click: function(data){
+                    lot.new(
+                        auctionInstance,
+                        function(classPrototype, data){
+                            if (classPrototype.editedInstance) {
+                                classPrototype.editedInstance.reload();
+                            }
+                            else {
+                                var instance = linq(dataPanel.getItems()).first(function(catItem){
+                                    return catItem.params.IdLot == data.IdLot;
+                                });
+                                if (instance) {
+                                    instance.reload();
+                                }
+                                else {
+                                    instance = new classPrototype(data);
+                                    instance.reload(function(){
+                                        $(dataPanel).append(instance.htmlForm);
+                                    });
+                                }
+                            }
+                        }
+                    );
+                }
+            },
+            filterOptions.blockSplitter,
+            filterOptions.viewTable,
+            filterOptions.viewTail
+        ]
+    });
+    $(dataPanel).append(lot_filter.htmlForm);
+}
+
+function auctionParamsListFilter(auctionInstance) {
+    var params_filter = new filter({
+        change: function(data){
+
+        },
+        options: [
+            //Удалять параметры бессмысленно, т.к. при первой же синхронизации они восстановятся
+            {
+                element: '<img src="pict/visible_128.png" title="Включить показ параметров по списку"/>',
+                click: function(data){
+                    if (confirm('Вы уверены, что хотите изменить видимость выбранных параметров?')) {
+                        linq(dataPanel.getItems()).foreach(function(auct_param){
+                            auct_param.update('Visible', true);
+                        });
+                    }
+                }
+            },
+            {
+                element: '<img src="pict/unvisible_128.png" title="Отключить показ параметров по списку"/>',
+                click: function(data){
+                    if (confirm('Вы уверены, что хотите изменить видимость выбранных параметров?')) {
+                        linq(dataPanel.getItems()).foreach(function(auct_param){
+                            auct_param.update('Visible', false);
+                        });
+                    }
+                }
+            },
+            {
+                element: '<img src="pict/car_doc_add_128.png" title="Создать новый параметр"/>',
+                click: function(data){
+                    /*
+                     * Здесь callback не передаем и воспользуемся стандартным,
+                     * поскольку здесь нужно обновлять список параметров при создании нового
+                     */
+                    auct_lot_param.new(auctionInstance);
+                }
+            }
+        ]
+    });
+    $(dataPanel).append(params_filter.htmlForm);
+}

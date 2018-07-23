@@ -16,7 +16,7 @@ class DataBase {
     private $currentObject;
     
     function __construct(
-            /*все параметтры - строки*/
+            /*все параметры - строки*/
             $host, $dbName, $login, $pass
             ) {
         /*
@@ -38,7 +38,7 @@ class DataBase {
     
     //Метод непосредственно выполняет соединение с требуемой БД
     private function connect(
-            /*все параметтры - строки*/
+            /*все параметры - строки*/
             $host, $dbName, $login, $pass
             ) {
         $host = $host == '' ? 'localhost' : $host;
@@ -77,7 +77,7 @@ class DataBase {
             $result = $this->_execQueryCommad($query);
             /*Определим количество записей*/
             $command = $this->dbtype . '_num_rows';
-            if ($result != false) {
+            if ($result != false && gettype($result) !== gettype(true)) {
                 $rowsCount = $command($result);
                 /*Получим наименование команды для обработки очередной записи*/
                 $mode = $mode && strtolower((string)$mode) !== 'array' ? 'assoc' : 'array';
@@ -132,7 +132,21 @@ class DataBase {
                 self::_convertValue($row, $this->currentObject['fields']);
             })->getData();
         return $rows;
-        
+    }
+    
+    public function getObjects($condition) {
+        if (!$this->currentObject) {
+            throw new Exception('Не установлен объект для извелечения из БД');
+        }
+        $className = $this->getObjClassName();
+        $entityName = $this->currentObject['name'];
+        return (new linq($this->getRows($condition)))
+            ->select(function($row) use ($className, $entityName){
+                return new $className($row, $entityName);
+            })->getData();
+    }
+    private function getObjClassName(){
+        return class_exists($this->currentObject['name']) ? $this->currentObject['name'] : 'StandPrototype';
     }
     
     /*Метод удаляет запись из БД*/
@@ -155,7 +169,6 @@ class DataBase {
         }
         /*Создаем запрос для удаления записи*/
         $query = 'DELETE FROM ' . $this->currentObject['name'] . ' WHERE  ' . $pk['column_name'] . '=' . $entity[$pk['column_name']] . ' LIMIT 1';
-                        
         return $this->_execQueryCommad($query);
     }
     
@@ -164,7 +177,7 @@ class DataBase {
             $entity
             ) {
         if (!$this->currentObject) {
-            throw new Exception('Не установлен объект для извелечения из БД');
+            throw new Exception('Не установлен объект для вставки в БД');
         }
         if ($entity === null || gettype($entity) !== gettype($entity) || count($entity) < 1) {
             throw new Exception('Нет информации для вставки в БД');
@@ -182,7 +195,6 @@ class DataBase {
                 .') VALUES(' .
                 join(
                     ',',
-                    //(new linq($entity, 'assoc'))
                     (new linq($this->currentObject['fields'], 'assoc'))
                         ->where(function($column) {return $column['_primary_key'] ? false : true;})
                         ->select(function($column) use ($entity) {
@@ -207,6 +219,14 @@ class DataBase {
             $result = $this->$table_name->getEntity($lastId);
         }
         return $result;
+    }
+    
+    public function entityPKColumn() {
+        if (!$this->currentObject) {
+            throw new Exception('Не установлен объект для извелечения из БД');
+        }
+        return (new linq($this->currentObject['fields'], 'assoc'))
+        ->first(function($column){ return $column['_primary_key'];});
     }
     
     /*Метод обновляет запись в БД*/
@@ -242,7 +262,6 @@ class DataBase {
                 ->getData()
             ).
             ' WHERE ' . $pk['column_name'] . '=' . $entity[$pk['column_name']];
-        
         $this->_execQueryCommad($query);
         /*Вернем обновленную информацию*/
         $table_name = $this->currentObject['name'];
@@ -259,7 +278,6 @@ class DataBase {
             case 'bigint':
             case 'mediumint':
             case 'smallint':
-            case 'tinyint':
             case 'decimal':
             case 'dec':
             case 'double':
@@ -281,10 +299,12 @@ class DataBase {
             case 'mediumtext':
                 /*В строковых значениях необходимо экранировать кавычки и обратные слеши*/
                 return $v != null ? '\'' . str_replace('\'', '\'\'', str_replace('\\', '\\\\', (string)$v)) . '\'' : 'null';
+            case 'tinyint':
+                return $v === TRUE || (gettype($v) === gettype('aaa') && strtolower($v) === 'true') || (int)$v === 1 ? 1 : 0;
             case 'bit':
-                return gettype($v) === gettype(true) ?
+                return 'b\'' . (gettype($v) === gettype(true) ?
                     ($v ? '1' : '0') :
-                    ((($v = strtolower($v)) && $v === 'true' || $v === '1') ? '1' : '0');
+                    (($v = strtolower($v)) && ($v === 'true' || $v === '1') ? '1' : '0')) . '\'';
             case 'json':
                 if (gettype($v) === gettype('') ) {
                     /*Это строка, которую надо распарсить перед сохранением*/
@@ -301,12 +321,21 @@ class DataBase {
                 $formatString = 'Y-m-d H:i:s';
                 if (gettype($v) === gettype('') ) {
                     if ($v !== '') {
+                        
                         $v = new DateTime($v);
                         $v = '\'' . date($formatString, $v->getTimestamp()) . '\'';
                     }
                 }
+                elseif (gettype($v) === gettype(array())) {
+                    if (array_key_exists('date', $v)) {
+                        $v = new DateTime($v['date']);
+                        $v = '\'' . date($formatString, $v->getTimestamp()) . '\'';
+                    }
+                    else {
+                        $v = 'null';
+                    }
+                }
                 else {
-                    
                     try {
                         $v = '\'' . date($formatString, $v->getTimestamp()) . '\'';
                     } catch (Exception $ex) {
@@ -320,6 +349,15 @@ class DataBase {
                     if ($v !== '') {
                         $v = new DateTime($v);
                         $v = '\'' . date($formatString, $v->getTimestamp()) . '\'';
+                    }
+                }
+                elseif (gettype($v) === gettype(array())) {
+                    if (array_key_exists('date', $v)) {
+                        $v = new DateTime($v['date']);
+                        $v = '\'' . date($formatString, $v->getTimestamp()) . '\'';
+                    }
+                    else {
+                        $v = 'null';
                     }
                 }
                 else {
@@ -351,6 +389,7 @@ class DataBase {
         }
         /*Найдем ключевую колонку*/
         $primaryKey = (new linq($this->currentObject['fields'], 'assoc'))->first(function($col){ return $col['_primary_key'] === true;});
+        $rows = array();
         if ($primaryKey) {
             /*Отберем список колонок, которым надо преобразовать тип из строкового*/
             $columns = $this->currentObject['fields'];
@@ -362,6 +401,19 @@ class DataBase {
                 })->getData();
         }
         return count($rows) > 0 ? $rows[0] : null;
+    }
+    
+    public function getObject(
+            $IdObject
+            ) {
+        if (!$this->currentObject) {
+            throw new Exception('Не установлен объект для извелечения из БД');
+        }
+        
+        $className = $this->getObjClassName();
+        
+        return new $className($this->getEntity($IdObject), $this->currentObject['name']);
+        
     }
     
     public function getEmptyEntity(
@@ -381,7 +433,6 @@ class DataBase {
             )->getData();
         self::_convertValue($entity, $this->currentObject['fields']);
         return $entity;
-        
     }
     
     protected static function _convertValue(&$entity, &$columns) {
@@ -392,7 +443,6 @@ class DataBase {
                 case 'bigint':
                 case 'mediumint':
                 case 'smallint':
-                case 'tinyint':
                     $entity[$k] = (int)$v;
                     break;
                 case 'decimal':
@@ -409,6 +459,9 @@ class DataBase {
                 case 'tinytext':
                 case 'mediumtext':
                     $entity[$k] = $v . '';
+                    break;
+                case 'tinyint':
+                    $entity[$k] = $v === TRUE || (gettype($v) === gettype('aaa') && strtolower($v) === 'true') || (int)$v === 1 ? 1 : 0;
                     break;
                 case 'bit':
                     $entity[$k] = $v === '1' || $v === true || $v === 1;
@@ -431,17 +484,18 @@ class DataBase {
 
 
     public function __get($name/*Строка*/) {
-        /*Получим список таблиц, имеющихся в БД*/
-        $tablesList = $this->query('select table_name from information_schema.tables where table_schema=\'' . $this->dbname . '\'');
         /*Проверим, есть ли такая таблица в БД*/
-        $name = strtolower($name);
-        
-        if (($table_params = (new linq($tablesList))->first(function($line) use ($name){ return strtolower($line['table_name']) === $name;})) === null) {
+        $list = null;
+        if (count($list = $this->query('select table_name from information_schema.tables where table_schema=\'' 
+                . $this->dbname . '\' AND LOWER(table_name)=\'' . strtolower($name) . '\'')) < 1) {
             throw new Exception('Неизвестный тип объекта.');
+        }
+        else {
+            $table_params = $list[0];
         }
         /*Получим необходимые характеристики, чтобы по ним построить выборку*/
         $this->currentObject = array(
-            'name' => $name,
+            'name' => $table_params['table_name'],
             'fields' => (new linq($this->query('select '
                     . 'table_name, '
                     . 'column_name, '
@@ -477,6 +531,7 @@ class DataBase {
 }
 
 function debug($data) {
+    
     echo '<pre>';
     var_dump($data);
     echo '</pre>';

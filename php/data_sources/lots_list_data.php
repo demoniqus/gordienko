@@ -18,6 +18,7 @@ if (array_key_exists($key, $_REQUEST)) {
 /*Получаем состояние фильтра*/
 $key = 'filter';
 $filter = array();
+$report = array();
 if (array_key_exists($key, $_REQUEST) && gettype($_REQUEST[$key]) === gettype(array())) {
     $filter = $_REQUEST[$key];
     (new linq(array('KeyLot', 'VIN'))) ->for_each(function($k) use (&$filter){
@@ -37,6 +38,7 @@ else {
         )
     );
 }
+
 
 /*Построим условие для первичной выборки*/
 $conditions = array();
@@ -62,7 +64,7 @@ if (array_key_exists($key, $filter)){
             $sign = $k === 'from' ? '>=' : '<=';
             $res = '`SaleDate`' . $sign . "'" . $v['y'] 
                 . '-' . ($v['m'] < 10 ? '0' : '') . $v['m'] 
-                . '-' . ($v['d'] < 10 ? '0' : '') . $v['d'] . "'";
+                . '-' . ($v['d'] < 10 ? '0' : '') . $v['d'] . ($k === 'from' ? "'" : " 23:59:59'");
         }
         return $res;
     })
@@ -80,44 +82,54 @@ if (array_key_exists($key, $filter)){
 
 /*Извлекаем записи из БД с учетом состояния фильтра*/
 
+$checkedFields = array('KeyLot' => 'Key', 'VIN' => 'VIN');
+
 $auction_lotes_list = (new linq($db->lot_list->getRows(implode(' AND ', $conditions))))
-    ->where(function($lot) use ($filter) {
+    ->where(function($lot) use (&$filter, &$checkedFields) {
         if (!$filter) {
             return true;
         }
-        return (new linq($filter))->first(function($reg, $k) use ($lot){
-            $checkedV = '';
-            switch ($k) {
-                case 'KeyLot':
-                    $checkedV = $lot['Key'];
-                    break;
-                case 'VIN':
-                    $checkedV = $lot['VIN'] ? $lot['VIN'] : '';
-                    break;
-            }
+        return (new linq($checkedFields))->first(function($lotKey, $filterKey) use (&$lot, &$filter){
+            $checkedV = $lot[$lotKey] ? $lot[$lotKey] : '';
+            $reg = array_key_exists($filterKey, $filter) &&  $filter[$filterKey] ? $filter[$filterKey] : '';
             return !mb_ereg_match(strtolower($reg), strtolower($checkedV));
-        }) === null;
+        })  === null;
+        
     })
     ->select(function($lot) use ($db) {
         $lot['Key'] = base64_encode($lot['Key']);
         $lot['VIN'] = $lot['VIN'] ? base64_encode($lot['VIN']) : '';
-        $lot['_images'] = (new linq($db->lot_images->getRows('`Visible`=1 AND `IdLot`=' . $lot['IdLot'])))
+        $lot['Archive'] = !!$lot['Archive'];
+        $l = new lot_list($lot);
+        /*
+         * Т.к. пользователь может начать редактировать любой лот, то мы здесь 
+         * выбираем изображения и параметры независимо от их видимости. 
+         * Этот флаг учтем на стороне клиента.
+         */
+        $lot['_images'] = (new linq($l->getImages()))
                 ->select(function($img){
                     unset($img['OrigName']);
                     $img['FileName'] = base64_encode(GlobalVars::$lotDataDir . DIRECTORY_SEPARATOR . base64_decode($img['FileName']));
+                    $k = 'Visible';
+                    $img[$k] = $img[$k] == '1' ? true : false;
+                    $k = 'IsMain';
+                    $img[$k] = $img[$k] == '1' ? true : false;
                     return $img;
                 })
                 ->getData();
-        $lot['_params'] = (new linq($db->query('select ap.*, lpv.IdParamValue, lpv.Value from (select * from lot_params_values where `IdLot`=' . 
-                $lot['IdLot'] . ') as lpv left join (select * from auction_params where `IdAuction`=' . 
-                $lot['IdAuction'] . ' AND `Visible`=1) as ap on lpv.IdParam = ap.IdParam WHERE ap.IdParam IS NOT NULL')))
+        $lot['_params'] = (new linq((new lot_list($lot))->getParams()))
                 ->where(function($row){ return $row !== null && count($row) > 0; })
                 ->for_each (function(&$row){
-                    $k = 'Name';
-                    $row[$k] = $row[$k] === null ? null : base64_encode($row[$k]);
-                    $k = 'Caption';
-                    $row[$k] = $row[$k] === null ? null : base64_encode($row[$k]);
-
+                    (new linq(array('Name', 'Caption')))->for_each(function($k) use (&$row){
+                        $row[$k] = $row[$k] === null ? null : base64_encode($row[$k]);
+                        
+                    });
+                    (new linq(array('IdParamValue', 'IdAuction', 'IdLot', 'IdParam', 'OrderNum')))->for_each(function($k) use (&$row){
+                        $row[$k] = $row[$k] === null ? null : (int)$row[$k];
+                        
+                    });
+                    $k = 'Visible';
+                    $row[$k] = $row[$k] == '1' ? true : false;
                 })
                 ->getData();
         return $lot;
@@ -125,6 +137,24 @@ $auction_lotes_list = (new linq($db->lot_list->getRows(implode(' AND ', $conditi
 
 echo '{"records":';
 if (count($auction_lotes_list) > 0) {
+    $_key = 'ImagesCount';
+    if (array_key_exists($_key, $filter) && $filter[$_key] !== null && $filter[$_key] !== '') {
+        /*Отсеиваем по количеству картинок*/
+        $f = (function($CSign){
+            switch($CSign) {
+                case '<': return function($checkPoint, $imagesCount){ return $imagesCount < $checkPoint;};
+                case '>': return function($checkPoint, $imagesCount){ return $imagesCount > $checkPoint;};
+                case '=': return function($checkPoint, $imagesCount){ return $imagesCount == $checkPoint;};
+                case '>=': return function($checkPoint, $imagesCount){ return $imagesCount >= $checkPoint;};
+                case '<=': return function($checkPoint, $imagesCount){ return $imagesCount <= $checkPoint;};
+                case '<>': return function($checkPoint, $imagesCount){ return $imagesCount != $checkPoint;};
+            }
+        })($filter['ImagesCount_CSign']);
+        $checkPoint = intval($filter[$_key]);
+        $auction_lotes_list = (new linq($auction_lotes_list))->where(function($lot) use ($f, $checkPoint) {
+            return $f($checkPoint, count($lot['_images']));
+        })->getData();
+    }
     echo json_encode($auction_lotes_list);
 }
 else {

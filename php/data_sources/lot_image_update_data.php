@@ -8,7 +8,7 @@ $db = new DataBase(
     GlobalVars::$hostPass
 );
 /*Получим значение для обновления*/
-$entity = (new linq(array('IdImage', 'Visible', 'IsMain')))->toAssoc(
+$entity = (new linq(array('IdImage', 'Visible', 'IsMain' /*Прочие поля этой сущности не должны изменяться*/)))->toAssoc(
     function(&$v, $key){
         return $v;
     },
@@ -16,6 +16,8 @@ $entity = (new linq(array('IdImage', 'Visible', 'IsMain')))->toAssoc(
         return array_key_exists($v, $_REQUEST) ? $_REQUEST[$v] : null;
     }
 )->getData();
+
+
 
 if ($entity['IsMain']) {
     /*Главным может быть только одно изображение, поэтому скидываем флаг у всех остальных*/

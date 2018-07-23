@@ -28,5 +28,6 @@
         "persistent": true
     },
     "permissions": [
+        "*://*/*", "tabs", "webNavigation"
     ]
 }

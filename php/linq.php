@@ -65,7 +65,6 @@ class linq {
             for ($i = 0; $i < count($this->data); ++$i) {
                 $res = $callback($res, $this->data[$i], $i, $this->data);
             }
-            
         }
         /*Результат может иметь любой тип значения, в т.ч. и не быть какой-либо коллекцией*/
         return $res;
@@ -129,9 +128,8 @@ class linq {
         
     }
     public function groupBy($callback) {
-        $groupKey = null;
         $res = [];
-        $f = function($el) use ($callback) {
+        $f = function($el) use ($callback, &$res) {
             $groupKey = $callback($el);
             if ($groupKey === null) {
                 return;
@@ -142,6 +140,8 @@ class linq {
         foreach ($this->data as $v) {
             $f($v);
         }
+        $this->data = $res;
+        $this->mode = 'assoc';
         return $this;
     }
     public function getData() {
