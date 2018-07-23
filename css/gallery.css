@@ -1,0 +1,12 @@
+﻿
+.calendar {
+    
+}
+.calendar select {
+    border: 1px solid transparent;
+}
+
+.calendar select.day,
+.calendar select.month {
+    margin-right: 10px;
+}

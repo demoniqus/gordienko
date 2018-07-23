@@ -1,0 +1,1052 @@
+var vm = JSON.parse(document.getElementById('ProductDetailsVM').innerHTML);
+var buyNowIntervalID;
+var prebidIntervalID;
+var vendorparams = {
+    ItemID: vm.VehicleDetailsViewModel.ItemID,
+    vin: xor(vm.VehicleDetailsViewModel.VIN),
+    stockNo: vm.VehicleDetailsViewModel.StockNo,
+    branchCode: vm.VehicleDetailsViewModel.BranchCode,
+    zip: vm.VehicleDetailsViewModel.Zip,
+    IsRunAndDrive: vm.VehicleDetailsViewModel.IsRunAndDrive,
+    IsSpeciality: vm.VehicleDetailsViewModel.IsSpeciality,
+    IsVehicleAtBranchVB: vm.VehicleDetailsViewModel.IsVehicleAtBranchVB,
+    IsVirtualBranch: vm.VehicleDetailsViewModel.IsVirtualBranch,
+    VTypeForInstaVIN: vm.VehicleDetailsViewModel.VTypeForInsta,
+    StorageLocationId: vm.VehicleDetailsViewModel.StorageLocationId
+};
+function openIbuyfast() {
+    var ItemID = vm.VehicleDetailsViewModel.ItemID;
+    var params = {
+        ItemID: ItemID
+    };
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicle/GetBuyNowDetails/',
+        data: (params),
+        success: function (resultData) {
+            IBFShowPopup('IbuyFastPopup', 'fadeModalPopUp');
+            $(".inputErrorWrapper").hide();
+            if (resultData.UserLoginStatus != true) {
+                $("#buynowCancelbutton").hide();
+                $("#buynowbutton").hide();
+                $("#buynowLoginbutton").show();
+                $("#buynowClosebutton").show();
+            }
+
+            if (vm.VehicleDetailsViewModel.IBFPopupErrorMessage != null && vm.VehicleDetailsViewModel.IBFPopupErrorMessage != "") {
+                $("#buynowbutton").removeClass("greenBut").addClass("greenButDisbl");
+                $("#buynowClosebutton").show();
+            }
+        }, error: function () {
+            DisplayErrorPopup('ErrorPopup', 'fadeModalPopUp');
+        }
+    });
+    $("body").css({ "overflow-y": "hidden" });
+
+}
+
+function IBuyFastTime() {
+    var time = '';
+    kickoff = Date.parse(vm.VehicleDetailsViewModel.BuyNowCloseDate);
+    time = SetTimer(kickoff);
+    document.getElementById("ibuyfastcountdown").innerHTML = time;
+}
+
+function SubmitIBuyFastDialog() {
+
+    var ItemID = vm.VehicleDetailsViewModel.ItemID;
+    var SalvageID = vm.VehicleDetailsViewModel.SalvageID;
+    var AuctionID = vm.VehicleDetailsViewModel.AuctionID;
+    var AdjustedCloseDate = vm.VehicleDetailsViewModel.AdjustedCloseDate;
+    var BranchCode = vm.VehicleDetailsViewModel.BranchCode;
+    var StockNo = vm.VehicleDetailsViewModel.StockNo;
+    var Slot = vm.VehicleDetailsViewModel.Slot;
+    var Make = vm.VehicleDetailsViewModel.Make;
+    var Model = vm.VehicleDetailsViewModel.Model;
+    var Year = vm.VehicleDetailsViewModel.Year;
+
+    var AuctionDate = vm.VehicleDetailsViewModel.LiveDate;
+    var ShowPublicIcon = vm.VehicleDetailsViewModel.ShowPublicIcon;
+    var ShowIBidLiveIcon = vm.VehicleDetailsViewModel.ShowIBidLiveIcon;
+    var BuyNowInd = vm.VehicleDetailsViewModel.BuyNowInd;
+    var BuyNowAmount = vm.VehicleDetailsViewModel.BuyNowAmount;
+    var BuyNowCloseDate = vm.VehicleDetailsViewModel.BuyNowCloseDate;
+    var BuyNowExpired = vm.VehicleDetailsViewModel.BuyNowExpired;
+    var BuyNowSold = vm.VehicleDetailsViewModel.BuyNowSold;
+
+    var params = {
+        SalvageID: SalvageID,
+        ItemID: ItemID,
+        AuctionID: AuctionID,
+        AdjustedCloseDate: AdjustedCloseDate,
+        BranchCode: BranchCode,
+        StockNo: StockNo,
+        Slot: Slot,
+        Year: Year,
+        Make: Make,
+        Model: Model,
+        AuctionDate: AuctionDate,
+        ShowPublicIcon: ShowPublicIcon,
+        ShowIBidLiveIcon: ShowIBidLiveIcon,
+        BuyNowInd: BuyNowInd,
+        BuyNowAmount: BuyNowAmount,
+        BuyNowCloseDate: BuyNowCloseDate,
+        BuyNowExpired: BuyNowExpired,
+        BuyNowSold: BuyNowSold
+    };
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicles/ProcessBuyNow/',
+
+        data: (params),
+        success: function (resultData) {
+            if (resultData.UserLoginStatus == false) {
+                window.location.href = appRootDir + "Login.aspx?RegType=Guest";
+            }
+            else {
+                if (resultData.IBFPopupErrorMessage != "" && resultData.IBFPopupErrorMessage != null) {
+                    $("#buynowbutton").removeClass("greenBut").addClass("greenButDisbl");
+                    $("#buynowMessageholder").html("<div class='preBidError'><span class='errorText'><label>" + resultData.IBFPopupErrorMessage + "</label></span></div>");
+                    $("#buynowClosebutton").show();
+                    $("#buynowCancelbutton").hide();
+                }
+                else {
+                    document.getElementById('IbuyFastInfo').style.display = 'none';
+                    document.getElementById('ConfirmationDiv').style.display = 'block';
+                    $("#buynowCancelbutton").hide();
+                    $("#buynowbutton").hide();
+                    $("#buynowLoginbutton").hide();
+                    $("#buynowClosebutton").show();
+
+                }
+            }
+        },
+        dataType: 'json'
+    });
+}
+
+function ClosePopup() {
+    var url = window.location.href;
+    location.reload(true);
+}
+
+function ScrolltoYearmakemodelheader() {
+    var url = window.location.href;
+    if (url.indexOf('#vehicle') == -1 && url.indexOf('similarVehicleItemId=') == -1) {
+        $(document).scrollTop($("#vehicle").offset().top);
+    }
+}
+
+function LazyloadforVendorSection() {
+    var category = 'Vendor section';
+    $('.lazy').lazyload({
+        skip_invisible: false,
+        effect: "fadeIn",
+        appear: function () {
+            $.ajax({
+                type: 'POST',
+                data: (vendorparams),
+                url: appRootDir + 'Vehicle/getVendors/',
+                success: function (result) {
+                    $("#VendorSection").append(result);
+                    $('#Brokerinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+                    $('#Financeinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+                    $('#Transportation-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+                    GAForProductDetails('ProductDetails', 'Vendors', 'Vendors Scroll');
+                },
+                error: function () {
+
+                }
+            });
+        }
+    });
+}
+function loadforVendorSection() {
+    var category = 'Vendor section';
+    $.ajax({
+        type: 'POST',
+        data: (vendorparams),
+        url: appRootDir + 'Vehicle/getVendors/',
+        success: function (result) {
+            $("#VendorSection").append(result);
+            $('#Brokerinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+            $('#Financeinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+            $('#Transportation-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+        },
+        error: function () {
+
+        }
+    });
+}
+
+function IBFShowPopup(ShowDivId, fadeDivId) {
+    document.getElementById(fadeDivId).style.display = 'block';
+    document.getElementById(ShowDivId).style.display = 'block';
+
+    /*get window height and width*/
+    var winH = $(window).height();
+    var winW = $(window).width();
+    //Set the popup window to center
+    $("#IbuyFastModalPopup").css('top', winH / 2 - $("#IbuyFastModalPopup").height() / 2);
+    $("#IbuyFastModalPopup").css('left', winW / 2 - $("#IbuyFastModalPopup").width() / 2);
+
+    return false;
+}
+
+function PrebidShowPopup(ShowDivId, fadeDivId) {
+    document.getElementById(fadeDivId).style.display = 'block';
+    document.getElementById(ShowDivId).style.display = 'block';
+
+    /*get window height and width*/
+    var winH = $(window).height();
+    var winW = $(window).width();
+    //Set the popup window to center
+    $("#PrebidModalPopup").css('top', winH / 2 - $("#PrebidModalPopup").height() / 2);
+    $("#PrebidModalPopup").css('left', winW / 2 - $("#PrebidModalPopup").width() / 2);
+
+    return false;
+}
+
+function PrebidCloseTime() {
+    var time = '';
+    kickoff = Date.parse(vm.VehicleDetailsViewModel.AdjustedCloseDate);
+    time = SetTimer(kickoff);
+    document.getElementById("PrebidCountdown").innerHTML = time;
+}
+
+function openPrebid() {
+    var ItemID = vm.VehicleDetailsViewModel.ItemID;
+
+    var params = {
+        ItemID: ItemID
+    };
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicle/GetBidDetails/',
+        data: (params),
+        success: function (resultData) {
+            PrebidShowPopup('PrebidPopup', 'fadeModalPopUp');
+            document.getElementById('prebidInfo').style.display = 'block';
+            document.getElementById('confirmationPrebidDiv').style.display = 'none';
+            document.getElementById('bottomPrebidSubmit').style.display = 'block';
+            document.getElementById('bottomPrebidConfirmation').style.display = 'none';
+            updateBidInfo(resultData);
+            if (vm.VehicleDetailsViewModel.PrebidPopupErrorMessage != null && vm.VehicleDetailsViewModel.PrebidPopupErrorMessage != "") {
+                $("#btnPlaceBid").removeClass("greenBut").addClass("greenButDisbl");
+                $("#prebidClosebutton").show();
+                $("#prebidCancelButton").hide();
+            }
+            if (resultData.UserLoginStatus == false) {
+                $("#prebidClosebutton").show();
+                $("#prebidCancelButton").hide();
+                $("#prebidLoginbutton").show();
+                $("#btnPlaceBid").hide();
+            }
+        },
+        error: function () {
+            DisplayErrorPopup('ErrorPopup', 'fadeModalPopUp');
+        }
+    });
+
+    $("body").css({ "overflow-y": "hidden" });
+}
+
+function DisplayErrorPopup(ShowDivId, fadeDivId) {
+    document.getElementById(fadeDivId).style.display = 'block';
+    document.getElementById(ShowDivId).style.display = 'block';
+    var winH = $(window).height();
+    var winW = $(window).width();
+    //Set the popup window to center
+    $("#ErrorModalPopup").css('top', winH / 2 - $("#ErrorModalPopup").height() / 2);
+    $("#ErrorModalPopup").css('left', winW / 2 - $("#ErrorModalPopup").width() / 2);
+    return false;
+}
+
+function ConfirmPrebidDialog() {
+    var maxBidEntered = $('#MaxBid').val();
+    var itemID = vm.VehicleDetailsViewModel.ItemID;
+    var auctionID = vm.VehicleDetailsViewModel.AuctionID;
+    var isHighPrebidder = vm.VehicleDetailsViewModel.IsHighPrebidder;
+    var incrementAmount = vm.VehicleDetailsViewModel.IncrementAmount;
+    var params = {
+        MaxBid: maxBidEntered,
+        ItemID: itemID,
+        AuctionID: auctionID,
+        IncrementAmount: incrementAmount,
+        HighBidder: isHighPrebidder
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicles/ValidateBids/',
+
+        data: (params),
+        success: function (resultData) {
+            if (resultData.UserLoginStatus == false) {
+                window.location.href = appRootDir + "Login.aspx?RegType=Guest";
+            } else {
+                if (resultData.PrebidPopupErrorMessage != "" && resultData.PrebidPopupErrorMessage != null) {
+                    $("#MaxBid").attr("disabled", "disabled");
+                    $("#prebidMessageholder").html("<div class='preBidError'><div class='errorText'><label>" + resultData.PrebidPopupErrorMessage + "</label></div></div>");
+
+                }
+                else if (resultData.BiddingErrorMessage != "" && resultData.BiddingErrorMessage != null) {
+                    $("#BiddingErrorMessage").html(resultData.BiddingErrorMessage);
+                    $(".inputErrorWrapper").show();
+
+                    $("#prebidCurrentHigh").empty().text(resultData.HighBidAmount);
+                    if (resultData.HighBidder != null) {
+                        $(".prebidwinningstatus").empty().text(resultData.HighBidder);
+                        $('.preLosing').addClass('preWinning').removeClass('preLosing');
+                    }
+                    else if (resultData.LosingBidStatus != null) {
+                        $(".prebidwinningstatus").empty().text(resultData.LosingBidStatus);
+                        $('.preWinning').addClass('preLosing').removeClass('preWinning');
+                    }
+
+                }
+                else {
+                    $("#prebidcurrenthighconfirm").empty().text(resultData.HighBidAmount);
+                    if (resultData.HighBidder != null) {
+                        $("#prebidwinningstatus").empty().text(resultData.HighBidder);
+                        $('.preLosing').addClass('preWinning').removeClass('preLosing');
+                    }
+                    else if (resultData.LosingBidStatus != null) {
+                        $("#prebidwinningstatus").empty().text(resultData.LosingBidStatus);
+                        $('.preWinning').addClass('preLosing').removeClass('preWinning');
+                    }
+                    document.getElementById('prebidInfo').style.display = 'none';
+                    document.getElementById('confirmationPrebidDiv').style.display = 'block';
+                    document.getElementById('bottomPrebidSubmit').style.display = 'none';
+                    document.getElementById('bottomPrebidConfirmation').style.display = 'block';
+                    $("#maxbidvalue").text($('#MaxBid').val());
+                }
+            }
+        },
+        dataType: 'json'
+    });
+};
+
+function SubmitPrebidDialog() {
+
+    var originalMaxAmount = vm.VehicleDetailsViewModel.OriginalMaxAmount;
+    var maxBidEntered = $('#MaxBid').val();
+    var highBidAmount = vm.VehicleDetailsViewModel.DecimalHighBidAmount;
+    var isHighBidder = vm.VehicleDetailsViewModel.IsHighPrebidder;
+    var auctionTypeID = vm.VehicleDetailsViewModel.AuctionTypeID;
+    var myCurrent = vm.VehicleDetailsViewModel.MyCurrent;
+    var itemID = vm.VehicleDetailsViewModel.ItemID;
+    var auctionID = vm.VehicleDetailsViewModel.AuctionID;
+    var stockNo = vm.VehicleDetailsViewModel.StockNo;
+    var make = vm.VehicleDetailsViewModel.Make;
+    var model = vm.VehicleDetailsViewModel.Model;
+    var year = vm.VehicleDetailsViewModel.Year;
+    var branchID = vm.VehicleDetailsViewModel.BranchId;
+    var branchCode = vm.VehicleDetailsViewModel.BranchCode;
+    var itemNumber = vm.VehicleDetailsViewModel.Slot;
+    var incrementAmount = vm.VehicleDetailsViewModel.IncrementAmount;
+    var closedDate = vm.VehicleDetailsViewModel.AdjustedCloseDate;
+    var auctionDate = vm.VehicleDetailsViewModel.LiveDate;
+
+    var params = {
+        MaxBid: maxBidEntered, HighPrebid: highBidAmount, MyCurrent: myCurrent, HighBidder: isHighBidder, ItemID: itemID, ItemNumber: itemNumber, AuctionID: auctionID, AuctionTypeID: auctionTypeID,
+        StockNo: stockNo, Make: make, Model: model, Year: year, BranchID: branchID, BranchCode: branchCode, IncrementAmount: incrementAmount, ClosedDate: closedDate, OriginalMaxAmount: originalMaxAmount, AuctionDate: auctionDate
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicles/ProcessBid/',
+
+        data: (params),
+        success: function (resultData) {
+            if (resultData.UserLoginStatus == false) {
+                window.location.href = appRootDir + "Login.aspx?RegType=Guest";
+            } else {
+                if (resultData.PrebidPopupErrorMessage != "" && resultData.PrebidPopupErrorMessage != null) {
+                    showPrebidconfirmpopup();
+                    $("#MaxBid").attr("disabled", "disabled");
+                    $("#prebidMessageholder").html("<div class='preBidError'><div class='errorText'><label>" + resultData.PrebidPopupErrorMessage + "</label></div></div>");
+                    updateBidInfo(resultData);
+                }
+                else if (resultData.BiddingErrorMessage != "" && resultData.BiddingErrorMessage != null) {
+                    showPrebidconfirmpopup();
+                    $("#BiddingErrorMessage").html(resultData.BiddingErrorMessage);
+                    $(".inputErrorWrapper").show();
+                    updateBidInfo(resultData);
+                }
+                else {
+                    ClosePopup();
+                }
+            }
+
+        },
+        dataType: 'json'
+    });
+}
+
+function updateBidInfo(resultData) {
+    $("#prebidCurrentHigh").empty().text(resultData.HighBidAmount);
+    if (resultData.HighBidder != null) {
+        $(".prebidwinningstatus").empty().text(resultData.HighBidder);
+        $('.preLosing').addClass('preWinning').removeClass('preLosing');
+    }
+    else if (resultData.LosingBidStatus != null) {
+        $(".prebidwinningstatus").empty().text(resultData.LosingBidStatus);
+        $('.preWinning').addClass('preLosing').removeClass('preWinning');
+    }
+    if (resultData.OutBidAmountNeededText != null) {
+        $("#outbidamtneededlabel").text(resultData.OutBidAmountNeededText);
+    }
+}
+
+function showPrebidconfirmpopup() {
+    document.getElementById('prebidInfo').style.display = 'block';
+    document.getElementById('confirmationPrebidDiv').style.display = 'none';
+    document.getElementById('bottomPrebidSubmit').style.display = 'block';
+    document.getElementById('bottomPrebidConfirmation').style.display = 'none';
+}
+
+function ValidateTextValue() {
+    var MaxBidTextbox = document.getElementById('MaxBid');
+    var divHighPrebidWarningThreshold = document.getElementById('DivHighPrebidWarningThreshold');
+
+    if (HighPrebidWarningThresholdAmount != null && MaxBidTextbox != null) {
+        if (parseInt(MaxBidTextbox.value) >= parseInt(HighPrebidWarningThresholdAmount)) {
+            divHighPrebidWarningThreshold.style['display'] = 'block';
+        } else {
+            divHighPrebidWarningThreshold.style['display'] = 'none';
+        }
+    }
+}
+
+function keyPressRuleForMaxBid() {
+    $("#MaxBid").keypress(function (e) {
+        if (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)) {
+            return false;
+        }
+    });
+}
+
+function clearTimers() {
+    clearInterval(buyNowIntervalID);
+    buyNowIntervalID = 0;
+    clearInterval(prebidIntervalID);
+    prebidIntervalID = 0;
+}
+
+function SetTimer(kickoff) {
+    now = new Date();
+    diff = kickoff - now;
+    days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    hours = Math.floor(diff / (1000 * 60 * 60));
+    mins = Math.floor(diff / (1000 * 60));
+    secs = Math.floor(diff / 1000);
+    dd = days;
+    hh = hours - days * 24;
+    mm = mins - hours * 60;
+    ss = secs - mins * 60;
+    var time = '';
+    if (dd >= 8)
+        time = dd + "d ";
+    else if (dd > 0 && dd < 8 && hh > 0)
+        time = dd + "d " + hh + 'h ';
+    else if (dd > 0 && dd < 8 && hh == 0)
+        time = dd + "d ";
+    else if (dd == 0 && hh > 0 && mm > 0)
+        time = hh + 'h ' + mm + 'm ';
+    else if (dd == 0 && hh > 0 && mm == 0)
+        time = hh + 'h ';
+    else if (hh == 0 && mm > 0)
+        time = mm + 'm ';
+    else if (hh == 0 && mm < 1)
+        time = ss + 's ';
+    return time;
+}
+
+function LoginClick() {
+    window.location.href = appRootDir + "Login.aspx?RegType=Guest";
+}
+
+function watchClick() {
+    var ItemID = vm.VehicleDetailsViewModel.ItemID;
+    var Metroid = vm.VehicleDetailsViewModel.Metroid;
+    var StockNo = vm.VehicleDetailsViewModel.StockNo;
+    var LoginStatus = vm.VehicleDetailsViewModel.UserLoginStatus;//.ToString().ToLower();
+    var WatchStatus = vm.VehicleDetailsViewModel.IsWatching;//.ToString().ToLower();
+
+    var params = {
+        itemID: ItemID,
+        metroid: Metroid,
+        stockNo: StockNo,
+        watchStatus: WatchStatus
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicles/WatchListClick/',
+        data: (params),
+        success: function (resultData) {
+            if (resultData.UserLoginStatus == false) {
+                window.location.href = appRootDir + "Login.aspx?RegType=Guest";
+            } else {
+                vm.VehicleDetailsViewModel.IsWatching = resultData.IsWatching;
+                if (resultData.IsWatching) {
+                    $("#btnstopwatch").show();
+                    $("#btnwatch").hide();
+                }
+                else {
+                    $("#btnstopwatch").hide();
+                    $("#btnwatch").show();
+                }
+            }
+        },
+        error: function () {
+            $("#btnstopwatch").hide();
+            $("#btnwatch").show();
+        }
+    });
+}
+
+var actionsAdditionalOpen = false;
+
+function fixActions() {
+    var actionsHeight = $('.actions-fixed-wrapper').outerHeight() + 50,
+        actionsWrapper = $('.pd-actions-wrapper'),
+        actionsWrapperHeight = actionsWrapper.outerHeight() + 20;
+
+    $('.pd-actions-outter-wrapper').css({ height: actionsWrapperHeight + 'px' });
+
+    actionsWrapper.find('.additional-info-wrapper').hide()
+                  .end().find('.btn-more').hide();
+
+    actionsWrapper.addClass('actions-fixed').css({ top: '-' + actionsHeight + 'px' })
+                  .animate({ top: 0 }, 150, 'swing');
+}
+
+function unfixActions() {
+    $('.pd-actions-wrapper').animate({ top: -150 }, 150, 'swing', function () {
+        var actionsWrapper = $('.pd-actions-wrapper');
+
+        actionsWrapper.find('.btn-more').show(10)
+                            .end().removeClass('actions-fixed');
+
+        if (actionsAdditionalOpen) {
+            actionsWrapper.find('.additional-info-wrapper').show()
+                  .end().find('.btn-more').show();
+        }
+
+        $('.pd-actions-outter-wrapper').css({ height: 'auto' });
+    });
+}
+
+function xor(str) {
+    var res = "";
+
+    for (var i = 0; i < str.length;) {
+        // holds each letter (2 digits)
+        var letter = "";
+        letter = str.charAt(i) + str.charAt(i + 1);
+
+        // build the real decoded value
+        res += String.fromCharCode(parseInt(letter, 16));
+        i += 2;
+    }
+    return res;
+}
+
+// Check if there's a Max Bid and add padding to container
+function checkMaxBid() {
+    if ($('.max-bid-desktop').length) {
+        var labelHeight = $('.max-bid-desktop').outerHeight();
+
+        $('.actions-fixed-wrapper').css({ paddingBottom: labelHeight + 'px' });
+
+        if (labelHeight > 25)
+            $('.max-bid-desktop').css({ bottom: '-42px' });
+        else
+            $('.max-bid-desktop').css({ bottom: '-25px' });
+    }
+}
+
+$(window).on('resize', function () {
+    checkMaxBid();
+});
+
+$(document).ready(function () {
+
+    $("#ChromeDataBtn").click(function () {
+        $.ajax({
+            url: "/Vehicle/GetChromeDataJson",
+            type: "GET",
+            data: { vin: xor(vm.VehicleDetailsViewModel.VIN) },
+            success: function (result) {
+                var response = result.chromeData;
+                var noOfCols = 0;
+                var ColSizePlaceHolder="##Col-Size##"
+                var target = $("#ChromeDataByCategory");
+                var html = "";
+                var factoption = response.FactOptionsData;
+                if (factoption != null && factoption != undefined){
+                    var attributes = factoption.Attributes;
+                    if (attributes != null && attributes != undefined && attributes.length > 0) {
+                        noOfCols = noOfCols + 1;
+                        html += '<div class="' + ColSizePlaceHolder + '"><h2>' + factoption.CategoryName + '</h2>';
+                        $.each(attributes, function (indes, attr) {
+                            if (attr != null && attr != undefined && attr.Values != null && attr.Values != undefined && attr.Values.length > 0) {
+                                html += '<h4>' + attr.Name + '</h4>';
+                                html += '<ul class="chrome-list">';
+                                $.each(attr.Values, function (attrvalIndex, attrval) {
+                                    html += '<li>' + attrval + '</li>';
+                                });
+                                html += '</ul>';
+                            }
+                        });
+                        html += '</div>';
+                    }                 
+                }
+                var vinInfo = response.StanEquipmentData;
+                if (vinInfo != null && vinInfo != undefined) {
+                    var attributes = vinInfo.Attributes;
+                    if (attributes != null && attributes != undefined && attributes.length > 0) {
+                        noOfCols = noOfCols + 1;
+                        html += '<div class="'+ColSizePlaceHolder+'"><h2>' + vinInfo.CategoryName + '</h2>';
+                        $.each(attributes, function (indes, attr) {
+                            if (attr != null && attr != undefined && attr.Values != null && attr.Values != undefined && attr.Values.length > 0 ){
+                                html += '<h4>' + attr.Name + '</h4>';
+                                html += '<ul class="chrome-list">';
+                                $.each(attr.Values, function (attrvalIndex, attrval) {
+                                    html += '<li>' + attrval + '</li>';
+                                });
+                                html += '</ul>';
+                            }
+                        });
+                        html += '</div>';
+                    }               
+                }
+                var genericinfo = response.GenEquipmentData;
+                if (genericinfo != null && genericinfo != undefined ) {
+                    var attributes = genericinfo.Attributes;
+                    if (attributes != null && attributes != undefined && attributes.length > 0) {
+                        noOfCols = noOfCols + 1;
+                        html += '<div class="'+ColSizePlaceHolder+'"><h2>' + genericinfo.CategoryName + '</h2>';
+                        $.each(attributes, function (indes, attr) {
+                            if (attr != null && attr != undefined && attr.Values != null && attr.Values != undefined && attr.Values.length > 0) {
+                                html += '<h4>' + attr.Name + '</h4>';
+                                html += '<ul class="chrome-list">';
+                                $.each(attr.Values, function (attrvalIndex, attrval) {
+                                    html += '<li>' + attrval + '</li>';
+                                });
+                                html += '</ul>';
+                            }
+                        });
+                        html += '</div>';
+                    }
+                }
+
+                var techSpecs = response.TechSpecsData;
+                if (techSpecs != null && techSpecs != undefined && techSpecs.length>0) {
+                    html += '<div class="' + ColSizePlaceHolder + '"><h2>' + result.TechSpecCategoryName + '</h2>';
+                    noOfCols = noOfCols + 1;
+                    $.each(techSpecs, function (techIndex, tech) {
+                        var groupData = tech.GroupData;
+                        if (groupData != null && groupData != undefined && groupData.length > 0) {
+                            var grpname = tech.GroupName;
+                            html += '<h4><strong>' + grpname + '</strong></h4>';
+                            $.each(groupData, function (headerIndex, headerVal) {
+                                if (headerVal!=null&&headerVal!=undefined&& headerVal.HeaderValue != null && headerVal.HeaderValue != undefined && headerVal.HeaderValue.length > 0) {
+                                    html += '<ul class="chrome-list">';
+                                    $.each(headerVal.HeaderValue, function (headerValIndex, header) {
+                                        html += "<li>" + header.TitleName + " - " + header.Value + "  " + header.Measurement + "</li>";
+                                    });
+                                    html += '</ul>';
+                                }
+                            });
+                        }
+                    });
+                    html += "</div>";                
+                }
+                var replaceStr="col-" + 12 / noOfCols;
+                html = html.replace(/##Col-Size##/g, replaceStr)
+                target.empty()
+                target.append(html);
+            },
+            error: function (response) {
+                $("#ChromeDataException").show()
+            }
+        });
+    });
+
+    $('#chromeData').scroll(function () {
+        if ($(this).scrollTop() > 0) {
+            $(".chrome-header").addClass("chrome-header-fixed");
+        }
+        else {
+            $(".chrome-header").removeClass("chrome-header-fixed");
+        }
+    });
+
+    $('.trigger, #close').click(function () {
+        $('html,body, #chromeData').scrollTop(0);
+        $('#fadeModalPopUp').fadeToggle();
+        $('.sliderChrom').toggleClass('close');
+        $('.chrome-header').removeClass('chrome-header-fixed');
+        $('body').toggleClass('modal-open');
+    });
+
+   
+    checkMaxBid();
+
+    // Back to Top on Mobile
+    $('.btn-back-top').on('click', function () {
+        $('html, body').animate({ scrollTop: 0 }, 400);
+        return false;
+    });
+
+    $('#MaxBid').focus(function () {
+        $(".inputErrorWrapper").hide();
+    });
+
+    CheckActionViewsession()
+    CheckSaleInfosession();
+
+    // Tabs function
+    $('.btn-tab').on('click', function () {
+        var $this = $(this),
+            tabData = $this.data("tab"),
+            isDisabled = $this.hasClass('btn-tab-disabled');
+
+        if (!isDisabled) {
+            $('.btn-tab').removeClass('btn-tab-active');
+            $this.addClass('btn-tab-active');
+
+            $('.tabs').fadeOut('fast', function () {
+                $('.' + tabData).fadeIn('fast');
+            });
+        }
+
+    });
+
+    // Expand/more function
+    $('.btn-more').on('click', function () {
+        var $this = $(this),
+            infoWrapper = $this.siblings('.additional-info-wrapper'),
+            isVisible = infoWrapper.is(':visible'),
+            isActionSection = $this.is("#ActionViewExpansion"),
+            isSaleInfoSection = $this.is("#SaleInfoExpansion"),
+            buttonLabel = $this.find('.btn-more-label');
+
+        if (isVisible) {
+            infoWrapper.slideUp('fast', function () {
+                $this.find('.btn-more-icon').removeClass('rotated');
+            });
+            if (isActionSection) {
+                actionsAdditionalOpen = false;
+                $this.find('.btn-more-label').text(ShowMoreBiddingInfo);
+            }
+
+        } else {
+            infoWrapper.slideDown('fast', function () {
+                $this.find('.btn-more-icon').addClass('rotated');
+            });
+            if (isActionSection) {
+                actionsAdditionalOpen = true;
+                $this.find('.btn-more-label').text(ShowLessBiddingInfo);
+            }
+        }
+        if (isActionSection && (isVisible == false)) {
+            document.cookie = "ActionAreaCookie=true"
+            GAForProductDetails('ProductDetails', 'Action Area', 'Action View Click');
+        }
+        if (isActionSection && (isVisible == true)) {
+            document.cookie = "ActionAreaCookie=false"
+        }
+
+        if (isSaleInfoSection && (isVisible == false)) {
+            document.cookie = "SaleInfoCookie=true"
+            $this.find('.btn-more-label').text(ShowLessSaleInfo);
+
+            GAForProductDetails('ProductDetails', 'Sale Info', 'Sale Info Click');
+        }
+        if (isSaleInfoSection && (isVisible == true)) {
+            document.cookie = "SaleInfoCookie=false"
+            $this.find('.btn-more-label').text(ShowMoreSaleInfo);
+        }
+    });
+
+    function CheckSaleInfosession() {
+        var saleInfoCookie = document.cookie;
+        if (saleInfoCookie.search('SaleInfoCookie=true') != -1 || $('#offsiteiconLabel').length > 0) {
+            $('#SignIconSaleInfo').addClass('rotated');
+            $('#SaleInfoExpansionDiv').show();
+            $('#saleinfomorebutton').text(ShowLessSaleInfo);
+        }
+    }
+    function CheckActionViewsession() {
+        var actionAreaCookie = document.cookie;
+        if (actionAreaCookie.search('ActionAreaCookie=true') != -1) {
+            $('#SignIconActionView').addClass('rotated');
+            $('#ActionViewExpansionDiv').show();
+            actionsAdditionalOpen = true;
+            $('#actionmorebutton').text(ShowLessBiddingInfo);
+
+        }
+    }
+    // Fix Action Area
+    $('.waypoint-trigger').waypoint(function (direction) {
+        if (direction === 'up')
+            unfixActions()
+
+        if (direction === 'down')
+            fixActions()
+
+    }, { offset: '0' });
+
+
+
+    // Show/hide Back to Top button on Mobile
+    $('.waypoint-back-top').waypoint(function (direction) {
+        if (direction === 'up') {
+            $('.btn-back-top').animate({ bottom: -50 }, 200, 'swing');
+        }
+        if (direction === 'down') {
+            $('.btn-back-top').animate({ bottom: 15 }, 200, 'swing');
+        }
+    }, { offset: '0' });
+
+
+
+    var vinmask = xor($("#VIN_masked1").text().trim());
+    $("#VIN_vehicleStats1").text(vinmask);
+    $('#vehicle-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true }); $('#vehicle-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#more-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#more-tooltip1').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#more-tooltip2').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#more-tooltip3').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#more-tooltip4').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+
+    var vinmaskheader = xor($(".VIN_masked").text().trim());
+    $(".VIN_vehicleStats").text(vinmaskheader);
+
+    $('#condition-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#reports-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#premiumreport-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#LargeImages').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#DownloadImages').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#Share-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#PageUpdated-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#conditionreports-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#Brokerinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#Financeinfo-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#Transportation-tooltip').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    $('#tab-parts').tooltipster({ theme: 'tooltipster-listing', position: 'top', animation: 'fade', offsetY: 0, maxWidth: 280, contentAsHTML: true });
+    var tooltipMessage = $('#saleinfo-tooltip').attr("title");
+    $('#saleinfo-tooltip').tooltipster({
+        contentAsHTML: true,
+        animation: 'fade',
+        arrow: true,
+        arrowColor: '',
+        content: tooltipMessage,
+        delay: 200,
+        fixedWidth: 200,
+        maxWidth: 550,
+        functionBefore: function (origin, continueTooltip) {
+            continueTooltip();
+            origin.tooltipster('content', tooltipMessage);
+        },
+        functionReady: function (origin, tooltip) { },
+        functionAfter: function (origin) { },
+        icon: '(?)',
+        iconDesktop: false,
+        iconTouch: false,
+        iconTheme: '.tooltipster-icon',
+        interactive: true,
+        interactiveTolerance: 350,
+        offsetX: 0,
+        offsetY: 0,
+        onlyOne: true,
+        position: 'left',
+        speed: 0,
+        timer: 0,
+        theme: '.ACTooltip',
+        touchDevices: true,
+        trigger: 'hover',
+        updateAnimation: true
+    });
+});
+
+function OpenInspectionVendors() {
+    $.ajax({
+        url: appRootDir + "VehicleInspection/RenderInspectionProviders",
+        cache: false,
+        datatype: "html",
+        error: function (xmlHttpRequest, textStatus, errorThrown) {
+            if (xmlHttpRequest.readyState == 0 || xmlHttpRequest.status == 0)
+                return;
+            else {
+                ShowErrorPopup('AC_ACTION', function (TryAgain, ajaxHandler) {
+                    if (TryAgain) {
+                        $.ajax(ajaxHandler);
+                    }
+                }, this);
+            }
+        },
+        success: function (data) {
+            $("#VehicleInspectionPopup .whiteContent .popContent").empty().html(data);
+            ShowInspectionVendorsPopup('VehicleInspectionPopup', 'fadeModalPopUp');
+            $("body").css({ "overflow-y": "hidden" })
+        }
+    });
+}
+
+function ShowInspectionVendorsPopup(ShowDivId, fadeDivId) {
+    document.getElementById(fadeDivId).style.display = 'block';
+    document.getElementById(ShowDivId).style.display = 'block';
+
+    /*get window height and width*/
+    var winH = $(window).height();
+    var winW = $(window).width();
+    //Set the popup window to center
+    $("#VehicleInspectionModalPopup").css('top', winH / 2 - $("#VehicleInspectionModalPopup").height() / 2);
+    $("#VehicleInspectionModalPopup").css('left', winW / 2 - $("#VehicleInspectionModalPopup").width() / 2);
+
+    return false;
+}
+function CloseInspectionVendors() {
+    document.getElementById('fadeModalPopUp').style.display = 'none';
+    document.getElementById('VehicleInspectionPopup').style.display = 'none';
+    $("body").css({ "overflow-y": "auto" })
+}
+
+function TrackGAEvent(category) {
+    try {
+        var stockNumber = vm.VehicleDetailsViewModel.StockNo;
+        var userId = vm.VehicleDetailsViewModel.UserId;
+        TrackGoogleAnalyticsEvents('true', category, stockNumber, userId);
+    } catch (ex) { }
+    return true;
+}
+
+function HistoryClick(ItemID, AuctionID) {
+    var params = {
+        ItemID: ItemID,
+        AuctionID: AuctionID
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'Vehicles/GetPrebidHistory/',
+        data: (params),
+        success: function (resultData) {
+            var trs = "";
+            $(resultData.PreBidHistory).each(function (index, element) {
+                trs += "<tr><td>" + element.Amount + "</td><td>" + element.HighBidder + "</td><td>" + element.Date + "</td></tr>";
+            });
+            $("#historyTable").find("tr:gt(0)").remove();
+            if ($('#biddingHistory').css('display') == 'none') {
+                $('#biddingHistory').css("display", "block");
+            } else {
+                $('#biddingHistory').css("display", "none");
+            }
+            $('#historyTable tr:last').after(trs);
+        },
+        error: function () {
+            $("#historyExceptionDiv").show();
+            $("#historyContent").hide();
+
+
+        }
+    });
+
+};
+
+function RedirectToInstaVinReport(url) {
+    return url + xor($("#VIN_masked1").text().trim());
+}
+
+function HollanderLicensePrompt() {
+    ShowPopup($("#HollanderPopup"));
+    $('#fadeRegModalPopUp').show();
+    $('#HollanderPopup').show();
+}
+function ShowPopup(divid) {
+    var winH = $(window).height();
+    var winW = $(window).width();
+    //Set the popup window to center
+    divid.css('top', winH / 2 - divid.height() / 2);
+    divid.css('left', winW / 2 - divid.width() / 2);
+    return false;
+}
+function HollanderPromptNoclick() {
+    $('#fadeRegModalPopUp').hide();
+    $('#HollanderPopup').hide();
+}
+function HollanderPromptYesclick(salvageId) {
+    $.ajax({
+        type: 'POST',
+        url: appRootDir + 'HollanderParts/SaveHollanderLicensePreferences/',
+        success: function (result) {
+            $('#fadeRegModalPopUp').hide();
+            $('#HollanderPopup').hide();
+            PartsTabBinding(salvageId);
+            $('#tab-parts').trigger('click')
+        },
+        error: function () {
+            $('#tab-vehicle').trigger('click');
+            $('#fadeRegModalPopUp').hide();
+            $('#HollanderPopup').hide();
+        }
+    });
+}
+function PartsTabClick(salvageId) {
+
+
+
+    //ajax  call to checkk for  value in User preferences..
+    $.ajax({
+        type: 'GET',
+        cache: false,
+        url: appRootDir + 'HollanderParts/DisplayHollanderPartsPopup/',
+        success: function (result) {
+            if (result == "True") {
+                $('#tab-vehicle').trigger('click');
+                HollanderLicensePrompt();
+            }
+            else {
+                PartsTabBinding(salvageId);
+                $('#fadeRegModalPopUp').hide();
+                $('#HollanderPopup').hide();
+            }
+
+        },
+        error: function () {
+            $('#tab-vehicle').trigger('click');
+            $('#fadeRegModalPopUp').hide();
+            $('#HollanderPopup').hide();
+        }
+    });
+
+
+};
+
+function PartsTabBinding(salvageId) {
+
+    $.ajax({
+        type: 'GET',
+        cache: false,
+        url: appRootDir + 'HollanderParts/DisplayPartsInfo?salvageID=' + salvageId,
+        success: function (data) {
+            $("#partsInfoDiv").html(data);
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
+
+

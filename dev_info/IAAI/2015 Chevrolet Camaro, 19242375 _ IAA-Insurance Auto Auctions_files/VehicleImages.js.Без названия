@@ -1,0 +1,511 @@
+﻿/// <reference path="mapiconmaker.js" />
+var IMAGEMODULE = (function () {
+    var mod = {};
+    var seadragonViewer;
+    var imageHoverTimeoutID;
+    var selectedThumbnail;
+    var visRootUrl;
+    var hoverImageKey;
+    var imageHoverOverDelay = 100;
+    var isDeepZoomAvailable = false;
+    var logDeepZoomRequest = true;
+    var userImageCount = 0;
+    var stockNo;
+    var salvageId;
+    var imagekey = '';
+    var imagewidth = '';
+    var imageheight = '';
+    var imageorder = '';
+
+    mod.createImageSection = function (imgUrl, allowDeepZoom, dimensions, thumbnailKey, imageHoverDelay, logDZRequest, Enable124X93Thumbnail) {
+        intializeData();
+        imageHoverOverDelay = imageHoverDelay;
+        visRootUrl = imgUrl;
+        if (logDZRequest && logDZRequest.toLowerCase() == "true") {
+            logDeepZoomRequest = true;
+        }
+        if (dimensions == null) {
+            $("#LargeImages").hide();
+            $("#DownloadImages").hide();
+        }
+        if (dimensions && dimensions.keys && dimensions.keys[0]) {
+            stockNo = dimensions.keys[0].SN;
+            salvageId = dimensions.keys[0].SID;
+            if (allowDeepZoom && allowDeepZoom.toLowerCase() == "true" && dimensions.DeepZoomInd) {
+                isDeepZoomAvailable = true;
+                $(".largeImg").css({ position: "relative", border: "1px solid #e3e3e3", borderRadius: "4px" });
+                $("#deepzoom").css({ cursor: "move" });
+                $("#showdeepzoom").fadeIn('fast');
+                $('#VisControlsContainer').show().animate({ right: '10px' }, 500);
+            } else {
+                $('#VisControlsContainer').hide();
+            }
+            $("#fullViewImg").attr("src", getResizerUrl(dimensions.keys[0].K));
+            $("#fullViewImg").addClass("img-responsive");
+            $(".buynowpopipimage").attr("src", getResizerUrl(dimensions.keys[0].K));
+            createThumbnails(dimensions.keys, thumbnailKey, Enable124X93Thumbnail);
+        }
+        else {
+            $("#fullViewImg").attr("src", "../Images/noImageAvalBig.jpg");
+            $(".buynowpopipimage").attr("src", "../Images/noImageAvalBig.jpg");
+            $("#fullViewImg").addClass("img-responsive");
+            createThumbnails(null, null, Enable124X93Thumbnail);
+            $('#VisControlsContainer').hide();
+        }
+    };
+
+    mod.loadHDImageForSelectedThumbnail = function () {
+        openSeadragonTileSource(selectedThumbnail.data("image-key"), selectedThumbnail.data("image-width"), selectedThumbnail.data("image-height"));
+        if (logDeepZoomRequest) {
+            userImageCount = userImageCount + 1;
+            var params = {
+                imageOrder: selectedThumbnail.data("image-order"),
+                stockNo: stockNo,
+                salvageId: salvageId,
+                userImageCount: userImageCount
+            };
+            $.ajax({
+                type: 'POST',
+                url: appRootDir + 'vehicles/logDeepzoomRequest',
+                data: (params),
+                global: false,
+                dataType: 'html'
+            });
+        }
+        selectedThumbnail.data('is-deepzoom-loaded', true);
+    };
+
+    mod.loadHDImageForSelectedThumbnailforMobile = function (imagekey, imagewidth, imageheight, imageorder, logDeepZoomRequest, imgUrl, stockNo, salvageId) {
+        visRootUrl = imgUrl;
+        openSeadragonTileSource(imagekey, imagewidth, imageheight);
+        userImageCount = 1;
+        if (logDeepZoomRequest) {
+            userImageCount = userImageCount + 1;
+            var params = {
+                imageOrder: imageorder,
+                stockNo: stockNo,
+                salvageId: salvageId,
+                userImageCount: userImageCount
+            };
+            $.ajax({
+                type: 'POST',
+                url: appRootDir + 'vehicles/logDeepzoomRequest',
+                data: (params),
+                global: false,
+                dataType: 'html'
+            });
+        }
+    };
+
+    var intializeData = function () {
+        if (seadragonViewer) {
+            seadragonViewer.destroy();
+            seadragonViewer = null;
+        }
+        imageHoverTimeoutID = null;
+        selectedThumbnail = null;
+        visRootUrl = null;
+        hoverImageKey = null;
+        imageHoverOverDelay = 100;
+        isDeepZoomAvailable = false;
+        logDeepZoomRequest = false;
+        userImageCount = 0;
+        stockNo = null;
+        salvageId = null;
+    }
+
+    var createThumbnails = function (keys, thumbnailKey, Enable124X93Thumbnail) {
+        var currentWidth = 0;
+        var thumbDiv;
+        var cssapply = 0;
+        for (var i = 0; i < 10; i++) {
+            thumbDiv = $(document.createElement("div"));
+            if (keys && keys[i]) {
+                if (Enable124X93Thumbnail.toLowerCase() == "true") {
+                    thumbDiv.addClass("img-thumbs").addClass('thumb-' + (i + 1));
+                    thumbDiv.css({
+                        backgroundImage: 'Url(' + getThumbnailUrl124X93(thumbnailKey) + ')'
+                    });
+                    if (cssapply == 0)
+                        thumbDiv.css({ border: '1px solid #c90107' });
+                } else {
+                     thumbDiv.addClass("img-thumbs").addClass('thumb-' +(i +1));
+                    thumbDiv.css({
+                        height: '72px',
+                        width: '96px',
+                        float: 'left',
+                        display: 'inline-block',
+                        backgroundImage: 'Url(' + getThumbnailUrl(thumbnailKey) + ')',
+                        backgroundPosition: -1 * currentWidth + 'px 0px',
+                        outline: ''
+                    });
+                    if (cssapply == 0)
+                        thumbDiv.css({ border: '1px solid #c90107' });
+
+                }
+                thumbDiv.data('image-key', keys[i].K);
+                thumbDiv.data('image-width', keys[i].W);
+                thumbDiv.data('image-height', keys[i].H);
+                thumbDiv.data('image-order', keys[i].IN);
+                thumbDiv.data('is-deepzoom-loaded', false);
+
+
+                if (i == 0 && isDeepZoomAvailable) {
+                    setSelectedThumbnailNoFocus(thumbDiv);
+                }
+
+                thumbDiv.mouseenter(function (e) {
+                    if (imageHoverTimeoutID) {
+                        clearTimeout(imageHoverTimeoutID);
+                    }
+                    var that = $(this);
+                    imageHoverTimeoutID = setTimeout(function () {
+                        if (isDeepZoomAvailable) {
+                            if (hoverImageKey != that.data('image-key')) {
+                                hoverImageKey = that.data('image-key');
+
+                                // TFS 111304
+                                if (selectedThumbnail) {
+                                    selectedThumbnail.css({ border: '1px solid #fff' });
+                                }
+                                setSelectedThumbnail($(that));
+
+                                if (that.data('is-deepzoom-loaded')) {
+                                    $('#showdeepzoom').hide();
+                                    $('#toolbarDiv').show();
+                                    if (selectedThumbnail.data('image-key') == that.data('image-key')) {
+                                        openSeadragonTileSource(that.data('image-key'), that.data('image-width'), that.data('image-height'));
+                                    }
+                                    else {
+                                        openResizerImage(that.data('image-key'));
+                                    }
+                                }
+                                else {
+                                    openResizerImage(that.data('image-key'));
+                                    $('#showdeepzoom').show();
+                                    $('#toolbarDiv').hide();
+                                }
+                            }
+                        }
+                        else {
+                            openResizerImage(that.data('image-key'));
+                            $(".img-thumbs").css({ border: '1px solid #fff' });
+                            that.css({ border: '1px solid #c90107' });
+                        }
+
+                    }, imageHoverOverDelay);
+                });
+
+                thumbDiv.mouseleave(function (e) {
+                    if (imageHoverTimeoutID) {
+                        clearTimeout(imageHoverTimeoutID);
+                    }
+                    var that = $(this);
+                    if (selectedThumbnail) {
+                        selectedThumbnail.css({ border: '1px solid #c90107' });
+                    }
+                    if (isDeepZoomAvailable) {
+                        imageHoverTimeoutID = setTimeout(function () {
+                            if (hoverImageKey != selectedThumbnail.data('image-key')) {
+                                selectedThumbnail.data('image-key') = hoverImageKey;
+                                if (selectedThumbnail) {
+                                    selectedThumbnail.css({ border: '1px solid #fff' });
+                                }
+                                if (selectedThumbnail.data('is-deepzoom-loaded')) {
+                                    openSeadragonTileSource(selectedThumbnail.data("image-key"), selectedThumbnail.data("image-width"), selectedThumbnail.data("image-height"));
+                                }
+                                else {
+                                    openResizerImage(selectedThumbnail.data('image-key'));
+                                    $('#showdeepzoom').show();
+                                    $('#toolbarDiv').hide();
+                                }
+                            }
+                        }, imageHoverOverDelay);
+                    }
+                    else {
+                        //that.css({ border: '1px solid #fff' });
+                    }
+                });
+
+                thumbDiv.click(function (e) {
+                    if (imageHoverTimeoutID) {
+                        clearTimeout(imageHoverTimeoutID);
+                    }
+                    var that = $(this);
+                    imageHoverTimeoutID = setTimeout(function () {
+                        if (isDeepZoomAvailable) {
+                            if (hoverImageKey != that.data('image-key')) {
+                                hoverImageKey = that.data('image-key');
+
+                                // TFS 111304
+                                if (selectedThumbnail) {
+                                    selectedThumbnail.css({ border: '1px solid #fff' });
+                                }
+                                setSelectedThumbnail($(that));
+
+                                if (that.data('is-deepzoom-loaded')) {
+                                    $('#showdeepzoom').hide();
+                                    $('#toolbarDiv').show();
+                                    if (selectedThumbnail.data('image-key') == that.data('image-key')) {
+                                        openSeadragonTileSource(that.data('image-key'), that.data('image-width'), that.data('image-height'));
+                                    }
+                                    else {
+                                        openResizerImage(that.data('image-key'));
+                                    }
+                                }
+                                else {
+                                    openResizerImage(that.data('image-key'));
+                                    $('#showdeepzoom').show();
+                                    $('#toolbarDiv').hide();
+                                }
+                            }
+                        }
+                        else {
+                            openResizerImage(that.data('image-key'));
+                            $(".img-thumbs").css({ border: '1px solid #fff' });
+                            that.css({ border: '1px solid #c90107' });
+                        }
+
+                    }, imageHoverOverDelay);
+                });
+
+                currentWidth += 96;
+            }
+            else {
+                if (Enable124X93Thumbnail.toLowerCase() == "true") {
+                    thumbDiv.css({
+                        height: '93px',
+                        width: '124px',
+                        display: 'inline-block',
+                        float: 'left',
+                        backgroundImage: 'Url(../Images/noimageavlresize.gif)',
+                        border: '1px solid #fff',
+                        outline: ''
+                    });
+                } else {
+                    thumbDiv.css({
+                        height: '72px',
+                        width: '96px',
+                        display: 'inline-block',
+                        float: 'left',
+                        backgroundImage: 'Url(../Images/noimageavl.gif)',
+                        border: '1px solid #fff',
+                        outline: ''
+                    });
+                }
+            }
+            if (i < 5)
+                thumbDiv.appendTo('#spacedthumbs1strow');
+            else
+                thumbDiv.appendTo('#spacedthumbs2ndrow');
+
+            cssapply += 1;
+        }
+
+    };
+
+    var getThumbnailUrl124X93 = function (imageKey) {
+        if (visRootUrl && imageKey) {
+            return visRootUrl.concat('resizer?imageKeys=', imageKey, '&width=124&height=93');
+        }
+    };
+    var getThumbnailUrl = function (imageKey) {
+        if (visRootUrl && imageKey) {
+            return visRootUrl.concat('thumbnail?imageKeys=', imageKey);
+        }
+    };
+    var getResizerUrl = function (imageKey) {
+        if (visRootUrl && imageKey) {
+            return visRootUrl.concat('resizer?imageKeys=', imageKey, '&width=640&height=480');
+        }
+    };
+    var getResizerUrlForMobile = function (imageKey) {
+        if (visRootUrl && imageKey) {
+            return visRootUrl.concat('resizer?imageKeys=', imageKey, '&width=320&height=240');
+        }
+    };
+
+    var setSelectedThumbnail = function (thumbDiv) {
+        hoverImageKey = thumbDiv.data('image-key');
+        thumbDiv.css({ border: '1px solid #c90107' });
+        selectedThumbnail = thumbDiv
+    };
+
+    var setSelectedThumbnailNoFocus = function (thumbDiv) {
+        hoverImageKey = thumbDiv.data('image-key');
+        selectedThumbnail = thumbDiv
+    };
+
+    var openSeadragonTileSource = function (imagekey, width, height) {
+        var ts = new OpenSeadragon.TileSource(width, height, 250, 0);
+        ts.getTileUrl = function (level, x, y) {
+            return visRootUrl + "deepzoom?imageKey=" + imagekey + "&level=" + level + "&x=" + x + "&y=" + y + "&overlap=" + this.tileOverlap + "&tilesize=" + this.tileSize;
+        };
+        ts.ready = function (e) {
+
+        }
+        $('#fullViewImg').hide();
+        $('#deepzoom').show();
+        $('#showdeepzoom').fadeOut('fast', function () {
+            $('#toolbarDiv').fadeIn('fast');
+        });
+        seadragonViewer = seadragonViewer || CreateOpenSeadragonViewer();
+        seadragonViewer.open(ts);
+    };
+
+    var openResizerImage = function (imageKey) {
+        $("#fullViewImg").attr("src", getResizerUrl(imageKey));
+        $("#deepzoom").hide();
+        if (seadragonViewer) {
+            seadragonViewer.close();
+        }
+        $("#fullViewImg").show();
+    }
+
+    mod.createImageSectionforMobile = function (imgUrl, allowDeepZoom, dimensions, thumbnailKey, imageHoverDelay, logDZRequest, stockNumber, branchCode, branchId, salvageId, IsLazyLoadingEnabled) {
+        intializeData();
+        imageHoverOverDelay = imageHoverDelay;
+        visRootUrl = imgUrl;
+        if (logDZRequest && logDZRequest.toLowerCase() == "true") {
+            logDeepZoomRequest = true;
+        }
+        if (dimensions && dimensions.keys && dimensions.keys[0]) {
+            stockNo = dimensions.keys[0].SN;
+            salvageId = dimensions.keys[0].SID;
+            createThumbnailsImageforMobile(dimensions.keys, thumbnailKey, stockNumber, branchCode, branchId, salvageId, IsLazyLoadingEnabled);
+        }
+        else {
+            $("#DownloadImages").hide();
+            createThumbnailsImageforMobile(null, null, stockNumber, branchCode, branchId, salvageId, IsLazyLoadingEnabled);
+        }
+    };
+
+
+    mod.loadSingleImageforMobile = function (data, imagekey, imagewidth, imageheight, imageorder, logDeepZoomRequest, imgUrl, stockNo, salvageId) {
+        logDeepZoomRequest = logDeepZoomRequest;
+        visRootUrl = imgUrl;
+        var toalImagescount = 0;
+        toalImagescount = data.keys.length;
+        $('#showdeepzoom').hide();
+        $('#deepzoom').hide();
+        $('#toolbarDiv').hide();
+        var st = document.getElementById("images");
+        for (var i = 0; i < toalImagescount; i++) {
+            if (data && data.keys[i]) {
+                if (data.keys[i].K == imagekey) {
+
+                    $("#currentcnt").text(i + 1);
+                    $("#totalcnt").text(toalImagescount);
+                    imagekey = data.keys[i].K;
+                    imagewidth = data.keys[i].W;
+                    imageheight = data.keys[i].H;
+                    imageorder = data.keys[i].IN;
+                    $("#fullViewImg").attr("src", getResizerUrl(imagekey));
+                    $("#fullViewImg").attr("image-order", imageorder);
+                    $('#fullViewImg').show();
+                    if (i > 0 && i < toalImagescount) {
+                        linkprev = $(document.getElementById("imglnk_Prev"));
+                        linkprev.attr('data-code', data.keys[i - 1].K);
+                        $('#imglnk_Prev').attr('disabled', false);
+                    } else
+                        $('#imglnk_Prev').attr('disabled', true);
+                    if (i < toalImagescount - 1) {
+                        linknext = $(document.getElementById("imglnk_Next"));
+                        linknext.attr('data-code', data.keys[i + 1].K);
+                        $('#imglnk_Next').attr('disabled', false);
+                    } else
+                        $('#imglnk_Next').attr('disabled', true);
+
+                    var hdimageflag = $("#hdimage" + (imageorder - 1)).attr("is-deepzoom-loaded");
+                    if (hdimageflag == "true") {
+                        mod.loadHDImageForSelectedThumbnailforMobile(imagekey, imagewidth, imageheight, imageorder, logDeepZoomRequest, imgUrl, stockNo, salvageId);
+                    }
+
+                }
+            }
+        }
+        if (hdimageflag != "true") {
+            if (logDeepZoomRequest && logDeepZoomRequest.toLowerCase() == "true" && data.DeepZoomInd) {
+                $(".largeImg").css({ position: "relative", border: "1px solid #e3e3e3", borderRadius: "4px" });
+                $("#deepzoom").css({ cursor: "move" });
+                $("#showdeepzoom").fadeIn('fast');
+                $('#VisControlsContainer').show().animate({ right: '10px' }, 500);
+            } else
+                $('#VisControlsContainer').hide();
+        }
+
+    };
+
+
+
+    function initSlick() {
+        $(".regular").slick({
+            lazyload: 'ondemand',
+            arrows: false,
+            dots: true,
+            infinite: false,
+            slidesToShow: 2,
+            slidesToScroll: 2
+        });
+    }
+    function initlink() {
+        $('[id^=imglnk_]').on('click', function () {
+            var imgkey = $(this).attr('data-code');
+            window.location.href = '/Images/FullImageSingle?imagekey=' + imgkey;
+        });
+    }
+
+
+    var createThumbnailsImageforMobile = function (keys, thumbnailKey, stockNumber, branchCode, branchId, salvageId, IsLazyLoadingEnabled) {
+        var currentWidth = 0;
+        var thumbDiv;
+        var imgkey;
+        if (keys == null) {
+            $("#LargeImagesMobile").hide();
+            $("#LargeImagesMobileGrid").hide();
+        }
+        for (var i = 0; i < 10; i++) {
+            thumbDiv = $(document.createElement("div"));
+            img = $(document.createElement("img"));
+
+            if (keys && keys[i] && thumbnailKey != null) {
+                link = $(document.createElement("a"));
+                link.attr('id', 'imglnk_' + i)
+                link.attr('href', '#stayhere');
+                imgkey = getResizerUrlForMobile(keys[i].K);
+                link.attr('data-code', getResizerUrlForMobile(keys[i].K) + '&imageurl=' + keys[i].K + '&stockno=' + stockNumber + '&branchId=' + branchId + '&branchCode=' + branchCode + '&salvageId=' + salvageId + '&ProductDetailsurl=' + vm.ProductDetailsurl.replace(/&/g, '*'));
+                img = $(document.createElement("img"));
+                if (IsLazyLoadingEnabled.toLowerCase() == "true") {
+                    img.attr("data-lazy", getResizerUrlForMobile(keys[i].K));
+                } else {
+                    img.attr("src", getResizerUrlForMobile(keys[i].K));
+                }
+                img.css({
+                    backgroundPosition: -1 * currentWidth + 'px 0px',
+                    border: '1px solid #fff',
+                    outline: ''
+                });
+                img.data('image-key', keys[i].K);
+                img.data('image-width', keys[i].W);
+                img.data('image-height', keys[i].H);
+                img.data('image-order', keys[i].IN);
+                img.appendTo(link);
+                link.appendTo(thumbDiv);
+
+                $(".buynowpopipimage").attr("src", getResizerUrlForMobile(keys[0].K));
+            }
+            else {
+                $(".buynowpopipimage").attr("src", "../Images/noImageAvalBig.jpg");
+                img.attr("src", '../Images/noimageavlresize.gif')
+                img.appendTo(thumbDiv);
+            }
+            thumbDiv.appendTo('#MobileMaileImage');
+        }
+        initSlick();
+        initlink();
+    };
+
+
+
+    return mod;
+}());

@@ -1,0 +1,57 @@
+﻿(function () {
+    var divParent = document.createElement('div');
+    divParent.style.cssText = "position: relative; height: 147px; width:297px; overflow: visible;";
+    //divParent.style.position = 'relative';
+    //divParent.style.height = '174px';
+    //divParent.style.overflow = 'visible';
+    divParent.className = 'divHMC';
+
+    var hmsc = document.createElement('iframe');
+    hmsc.id = 'uniqueCalculatorDiv';
+    hmsc.scrolling = 'no';
+  
+    hmsc.style.cssText = "position:absolute;top:0;left:0;height:100%;min-width:295px;width:100px;*width:100%;border:solid 1px #ccc;";
+    hmsc.frameBorder = 0;
+      
+    if (typeof hmPar === 'undefined') {
+        hmPar = {
+            hmck: hmck,
+            // Client Security Key
+            hmdz: hmdz, // Buyer's Zip Code (US Only) (Optional) DestinationZip
+            hmdc: hmdc, // Buyer's Country (2 Character Code). – Required. If not available, set default to “US”. DestinationCountryCode
+            hmahid: (typeof hmahid === 'undefined' ? '' : hmahid),//'08030689EC35474BAEB158C02504B569';
+            hmvid: hmvid,//'13722449'; // Vehicle Stock Number to be used as report reference (Optional)
+            hmvin: hmvin,//'1FTPW12V76FA79619'; // VIN (Optional)
+            hmocc: hmocc,
+            hmoz: hmoz, // Yard Zip Code (Optional) OriginZip
+            hmrd: hmrd, // Runs and Drvies Options: 0 - INOP; 1 - Runs & Drives (Optional).
+            hmcid: hmcid, // Campaign ID
+            hmcv: hmcv, // Calculator Type & Design ID
+            hmtp: (typeof hmtp === 'undefined' ? '' : hmtp),
+            hmah: 'IAA'
+        };
+    }
+
+    var url = document.location.protocol + '//clciaa.haulmatch.com/?h=' + escape(window.location.hostname) + '&' + serialize(hmPar);
+   // var url = document.location.protocol + '//localhost:58250/?h=' + escape(window.location.host) + '&' + serialize(hmPar);
+    hmsc.src = url;
+
+
+    divParent.appendChild(hmsc);
+    var s = document.getElementById('hmc');
+    try 
+    {
+        s.parentNode.insertBefore(divParent, s);
+    }catch(error){
+        console.log("error load");
+    }
+
+    function serialize(data) {
+        var str = [];
+        for (var p in data)
+            if (data.hasOwnProperty(p)) {
+                str.push(encodeURIComponent(p) + "=" + encodeURIComponent(data[p]));
+            }
+        return str.join("&");
+    }
+})();

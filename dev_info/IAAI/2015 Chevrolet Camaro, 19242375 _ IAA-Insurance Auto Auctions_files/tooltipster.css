@@ -1,0 +1,106 @@
+
+/* This is the default Tooltipster theme (feel free to modify or duplicate and create multiple themes!): */
+.tooltipster-default {border-radius: 5px; border: 2px solid #000;background: #4c4c4c;color: #fff;}
+
+/* Use this next selector to style things like font-size and line-height: */
+.tooltipster-default .tooltipster-content {font-family: 'roboto',Arial, sans-serif; font-weight:normal; font-size: 14px;line-height: 16px;padding: 8px 10px;overflow: hidden;}
+
+/* This next selector defines the color of the border on the outside of the arrow. This will automatically match the color and size of the border set on the main tooltip styles. Set display: none; if you would like a border around the tooltip but no border around the arrow */
+.tooltipster-default .tooltipster-arrow .tooltipster-arrow-border {/* border-color: ... !important; */}
+
+/* This is the base styling required to make all Tooltipsters work */
+.tooltipster-base {padding: 0;font-size: 0;line-height: 0;position: absolute;z-index: 9999999;pointer-events: none;width: auto;overflow: visible;}
+.tooltipster-base .tooltipster-content {overflow: hidden;}
+.tooltipster-content {overflow-y: scroll;}
+/* These next classes handle the styles for the little arrow attached to the tooltip. By default, the arrow will inherit the same colors and border as what is set on the main tooltip itself. */
+.tooltipster-arrow {display: block;text-align: center;width: 100%;height: 100%;position: absolute;top: 0;left: 0;z-index: -1;}
+.tooltipster-arrow span, .tooltipster-arrow-border {display: block;width: 0; height: 0;position: absolute;}
+.tooltipster-arrow-top span, .tooltipster-arrow-top-right span, .tooltipster-arrow-top-left span {border-left: 8px solid transparent !important;border-right: 8px solid transparent !important;border-top: 8px solid;bottom: -8px;}
+.tooltipster-arrow-top .tooltipster-arrow-border, .tooltipster-arrow-top-right .tooltipster-arrow-border, .tooltipster-arrow-top-left .tooltipster-arrow-border {border-left: 9px solid transparent !important;border-right: 9px solid transparent !important;border-top: 9px solid;bottom: -8px;}
+.tooltipster-arrow-bottom span, .tooltipster-arrow-bottom-right span, .tooltipster-arrow-bottom-left span {border-left: 8px solid transparent !important;border-right: 8px solid transparent !important;border-bottom: 8px solid;top: -8px;}
+.tooltipster-arrow-bottom .tooltipster-arrow-border, .tooltipster-arrow-bottom-right .tooltipster-arrow-border, .tooltipster-arrow-bottom-left .tooltipster-arrow-border {border-left: 9px solid transparent !important;border-right: 9px solid transparent !important;border-bottom: 9px solid;top: -8px;}
+.tooltipster-arrow-top span, .tooltipster-arrow-top .tooltipster-arrow-border, .tooltipster-arrow-bottom span, .tooltipster-arrow-bottom .tooltipster-arrow-border {left: 0;right: 0;margin: 0 auto;}
+.tooltipster-arrow-top-left span, .tooltipster-arrow-bottom-left span {left: 6px;}
+.tooltipster-arrow-top-left .tooltipster-arrow-border, .tooltipster-arrow-bottom-left .tooltipster-arrow-border {left: 5px;}
+.tooltipster-arrow-top-right span,  .tooltipster-arrow-bottom-right span {right: 6px;}
+.tooltipster-arrow-top-right .tooltipster-arrow-border, .tooltipster-arrow-bottom-right .tooltipster-arrow-border {right: 5px;}
+.tooltipster-arrow-left span, .tooltipster-arrow-left .tooltipster-arrow-border {border-top: 8px solid transparent !important;border-bottom: 8px solid transparent !important; border-left: 8px solid;top: 50%;margin-top: -7px;right: -8px;}
+.tooltipster-arrow-left .tooltipster-arrow-border {border-top: 9px solid transparent !important;border-bottom: 9px solid transparent !important; border-left: 9px solid;margin-top: -8px;}
+.tooltipster-arrow-right span, .tooltipster-arrow-right .tooltipster-arrow-border {border-top: 8px solid transparent !important;border-bottom: 8px solid transparent !important; border-right: 8px solid;top: 50%;margin-top: -7px;left: -8px;}
+.tooltipster-arrow-right .tooltipster-arrow-border {border-top: 9px solid transparent !important;border-bottom: 9px solid transparent !important; border-right: 9px solid;margin-top: -8px;}
+
+/* Some CSS magic for the awesome animations - feel free to make your own custom animations and reference it in your Tooltipster settings! */
+.tooltipster-fade {opacity: 0;-webkit-transition-property: opacity;-moz-transition-property: opacity;-o-transition-property: opacity;-ms-transition-property: opacity;transition-property: opacity;}
+.tooltipster-fade-show {opacity: 1;}
+
+/* CSS transition for when contenting is changing in a tooltip that is still open. The only properties that will NOT transition are: width, height, top, and left */
+.tooltipster-content-changing {opacity: 0.5;-webkit-transform: scale(1.1, 1.1);-moz-transform: scale(1.1, 1.1);-o-transform: scale(1.1, 1.1);-ms-transform: scale(1.1, 1.1);transform: scale(1.1, 1.1);}
+.offSiteHD{font-size:18px; color:#a20106; padding:0 0 0px 0}
+.offSiteWrapper {padding:0 0 0 0; font-size:13px; font-family:'roboto',Arial,sans-serif; font-weight:normal;}
+.offSiteWrapper p{font-size:13px; padding:0; margin:0; font-weight:normal}
+
+
+.ACTooltip {border-radius: 5px; border: 2px solid #333333; background: #ededed;color: #333333; -webkit-box-shadow: 4px 4px 5px rgba(92, 105, 94, 0.5);
+-moz-box-shadow:    4px 4px 5px rgba(92, 105, 94, 0.5);
+box-shadow:         4px 4px 5px rgba(92, 105, 94, 0.5);position:absolute}
+.locationContainer { height:250px; overflow-y:auto}
+.locatWrapper {border-bottom:1px dotted #737373;overflow:hidden; padding:10px 0 10px 0}
+.laneWrapper {overflow:hidden; padding:10px 0 0 0}
+.locatP1 {padding:0 0 10px 0}
+.locatP2 {margin:0 0 10px 15px}
+.locatTip {margin:0 0 0 15px; border-radius:2px; padding:3px}
+.locatTitle {font-size:13px; color:#333333; font-weight:bold;}
+.locatMain {font-size:13px; font-weight:normal;}
+.locatSubTitle {font-weight:bold}
+.locatTipText {font-size:13px}
+/*more...*/
+.moreQuestion{font-weight:bold}
+.moreAnwser{font-weight:normal}
+.moreHour{font-weight:bold; font-size:13px}
+
+/* Use this next selector to style things like font-size and line-height: */
+.ACTooltip{font-size: 13px;line-height: 16px;padding: 8px 10px;}
+.tooltipster-content {font-size: 13px;line-height: 16px;padding: 8px 10px}
+.tooltipster-light {
+        border-radius: 5px;
+        border: 1px solid #cccccc;
+        background: #ededed;
+        color: #666666;
+        position:absolute
+}
+.tooltipster-light .tooltipster-content {
+        font-family: 'roboto',Arial, sans-serif;
+        font-weight:normal;
+        font-size: 12px;
+        line-height: 16px;
+        padding: 8px 10px;
+}
+.tooltipster-listing{border-radius:5px;border:2px solid #333;background:#ededed;color:#2d2d2d;-webkit-box-shadow:4px 4px 5px rgba(92,105,94,0.5);-moz-box-shadow:4px 4px 5px rgba(92,105,94,0.5);box-shadow:4px 4px 5px rgba(92,105,94,0.5); text-decoration:none}
+/*From common.css*/
+.tip_keywordSearch,.tip_vehicleRunandDriveImagebutton,.tip_iBidLive, .tip_publicAuction,.tip_IPayStatus, .tip_go2auctions,.tip_IbidNow, .tip_SealBidAuction, .tip_MyPrebidAuction, .tip_publicVechileDetail,.tip_VehicleStarts,.tip_VehicleRunandDrive, .tip_shrinkWrapVehicleDetail,.tip_saleDocument,.tip_MakeModelNote,.tip_estimatedRepairCost,.tip_ACV,.tip_dataLastUpdated,.tip_currentHighPre_Bid,.tip_itemNumber,.tip_stocknumber,.tip_publicVechile,.tip_PreBiddingHelpText,.tip_minbidWhatIsthis,.tip_financeTermsWhatIsthis,.tip_AFCFloorPlanWhatIsThis{cursor:help;}
+.toolTip_tip_iBidLive,.toolTip_tip_keywordSearch,.toolTip_tip_vehicleRunandDriveImagebutton,.toolTip_tip_publicAuction, .toolTip_tip_vehicleStats, .toolTip_tip_IPayStatus, .toolTip_tip_biddersPermission, .toolTip_tip_go2auctions,.toolTip_tip_IbidNow, .toolTip_tip_SealBidAuction,  .toolTip_tip_MyPrebidAuction, .toolTip_tip_OffsiteDetails, .toolTip_tip_publicVechileDetail,.toolTip_tip_VehicleStarts,.toolTip_tip_VehicleRunandDrive, .toolTip_tip_shrinkWrapVehicleDetail,.toolTip_tip_saleDocument,.toolTip_tip_MakeModelNote,.toolTip_tip_estimatedRepairCost,.toolTip_tip_ACV,.toolTip_tip_dataLastUpdated,.toolTip_tip_currentHighPre_Bid,.toolTip_tip_itemNumber,.toolTip_tip_stocknumber,.toolTip_tip_publicVechile,.toolTip_tip_PreBiddingHelpText{float:left;padding:0 9px 13px 0;}
+.toolTip_tip_IPayStatus, .toolTip_tip_biddersPermission, .toolTip_tip_go2auctions {background-image:none;filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src=../images/backgrounds/box-dropshadow-sm.png, sizingMethod= 'crop');} 
+ html > body .toolTip_tip_IPayStatus, html > body .toolTip_tip_biddersPermission, html > body .toolTip_tip_go2auctions{background:transparent url(../images/backgrounds/box-dropshadow-sm.png) bottom right no-repeat;}
+.toolTip_tip_OffsiteDetails{background-image:none;filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src=../images/backgrounds/remote-sale-box.png, sizingMethod= 'crop');}
+html > body .toolTip_tip_OffsiteDetails{}
+.toolTip_tip_iBidLive div.inner,.toolTip_tip_keywordSearch,.toolTip_tip_vehicleRunandDriveImagebutton,.toolTip_tip_publicAuction div.inner, .toolTip_tip_vehicleStats div.inner, .toolTip_tip_IPayStatus div.inner, .toolTip_tip_biddersPermission div.inner, .toolTip_tip_go2auctions div.inner,.toolTip_tip_publicVechileDetail,.toolTip_tip_VehicleStarts div.inner,.toolTip_tip_VehicleRunandDrive div,.toolTip_tip_IbidNow div.inner, .toolTip_tip_SealBidAuction div.inner, .toolTip_tip_MyPrebidAuction div.inner, .toolTip_tip_shrinkWrapVehicleDetail div.inner,.toolTip_tip_saleDocument div.inner,.toolTip_tip_MakeModelNote div.inner,.toolTip_tip_estimatedRepairCost div.inner,.toolTip_tip_ACV div.inner,.toolTip_tip_dataLastUpdated div.inner,.toolTip_tip_currentHighPre_Bid div.inner,.toolTip_tip_itemNumber,.toolTip_tip_stocknumber div.inner, .toolTip_tip_publicVechile div.inner,.toolTip_tip_toBePaid div.inner,.toolTip_tip_setonlineTool div.inner,.toolTip_tip_openVehiclesTool div.inner,.toolTip_tip_additionalbidder div.inner,.toolTip_tip_IBidTooltip div.inner,.toolTip_tip_IBuyTooltip div.inner,.toolTip_tip_minbidWhatIsthis,.toolTip_tip_VdEmailLink,.toolTip_tip_PreBiddingHelpText,.toolTip_tip_financeTermsWhatIsthis,.toolTip_tip_AFCFloorPlanWhatIsThis{width:185px;padding:9px;float:left;border:solid 9px #757575;background-color:#dedede;font-weight:normal;font-family:'roboto',Arial, Helvetica, sans-serif;font-size:1.05em;}
+.toolTip_tip_OffsiteDetails div.inner{width:260px;padding:9px;float:left;border:solid 9px #757575;background-color:#dedede;font-weight:normal;font-family:'roboto',Arial, Helvetica, sans-serif;font-size:1.05em;word-wrap:break-word}
+.toolTip_tip_vehicleStats ul li, .toolTip_tip_OffsiteDetails ul li{width:100%;float:left;clear:left;list-style:none;color:#333;margin:0 0 5px 0;}
+.toolTip_tip_vehicleStats dt, .toolTip_tip_OffsiteDetails dt{float:left;clear:left;margin-right:4px;font-weight:bold;font-family:'roboto',Arial, Helvetica, sans-serif;font-size:1.0em;line-height:1.1em;}
+.toolTip_tip_vehicleStats dd, .toolTip_tip_OffsiteDetails dd{float:left;font-weight:normal;font-family:'roboto',Arial, Helvetica, sans-serif;font-size:1.0em;line-height:1.1em;}
+.toolTip_largerHoverImg {float:left;padding:0;}
+.toolTip_largerHoverImg div.innerLargeImg {padding:9px;float:left;border:solid 9px #757575;background-color:#dedede;font-weight:normal;font-family:'roboto',Arial, Helvetica, sans-serif;}
+
+.tip_additionalbidder{cursor:pointer;}
+.tip_setonlineTool,.tooltip_openVehiclesTool,.tooltip_IBidTooltip,.tooltip_IBuyTooltip{cursor:pointer;}
+
+.toolTip_tip_toAdvancedEdit div.inner, .toolTip_tip_PreviousSearch div.inner,.toolTip_tip_DeleteSearch div.inner{padding:5px;float:left;border:solid 1px #c8c8c8;background-color:#e4e5f0;font-family:'roboto',Arial, Helvetica, sans-serif;font-size:1.05em; border-radius: 4px; width:auto; text-align:center; font-weight:normal;}
+
+.tooltip { position: absolute; }
+.tooltip iframe { width: 800px; height: 500px; }
+.tip_VIN {text-decoration:none}
+
+.tooltipster-base li{list-style:none}
+.tooltipster-base dl{padding-bottom:5px}
+.tooltipster-base dt{font-weight:600; display:inline}
+.tooltipster-base dd{ display:inline }

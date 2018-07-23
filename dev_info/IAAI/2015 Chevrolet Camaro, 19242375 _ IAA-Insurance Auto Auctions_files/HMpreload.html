@@ -1,0 +1,56 @@
+
+<!-- saved from url=(0150)https://www.iaai.com/Vehicles/HMpreload.htm?&CustomerZip=&CustomerCountry=&ClientVehicleID=24317391&ClientVehicleVIN=2G1FD3D35F9280204&OriginZip=33054 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style type="text/css">
+        body {
+            margin: 0px 0px 0px 0px;
+            background-image: url(../images/WholeLayout.gif);
+            background-repeat: no-repeat;
+        }
+
+        .loader {
+            position: absolute;
+            top: 70px;
+            left: 125px;
+            width: 43px;
+            height: 11px;
+            background-image: url(../images/ajax-loader.gif);
+            background-repeat: no-repeat;
+            float: left;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader"></div>
+    <script type="text/javascript" async="" src="./hmiaai.js.Без названия"></script><div class="divHMC" style="position: relative; height: 147px; width: 297px; overflow: visible;"><iframe id="uniqueCalculatorDiv" scrolling="no" frameborder="0" src="./saved_resource.html" style="position: absolute; top: 0px; left: 0px; height: 100%; min-width: 295px; width: 100px; border: 1px solid rgb(204, 204, 204);"></iframe></div><script type="text/javascript" id="hmc">
+        function gup(name) { name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]"); var regexS = "[\\?&]" + name + "=([^&#]*)"; var regex = new RegExp(regexS); var results = regex.exec(window.location.href); if (results == null) return ""; else return results[1]; }
+
+        var buyerCountry = gup("CustomerCountry");
+        if (buyerCountry == '')
+            buyerCountry = 'US';
+
+        var hmPar = {
+            hmck: '08030689EC35474BAEB158C02504B569',// Client Security Key
+            hmdz: gup("CustomerZip"), // Buyer's Zip Code (US Only) (Optional) DestinationZip
+            hmdc: buyerCountry, // Buyer's Country (2 Character Code). � Required. If not available, set default to �US�. DestinationCountryCode
+            hmvin: gup("ClientVehicleVIN"),//'1FTPW12V76FA79619'; // VIN (Optional)
+            hmoz: gup("OriginZip"), // Yard Zip Code (Optional) OriginZip
+            hmcid: '2002' // Campaign ID
+
+        };
+
+        (function () {
+
+            var hms = document.createElement('script');
+            hms.type = 'text/javascript';
+            hms.async = true;
+            hms.src = document.location.protocol + '//' + 'clciaa.haulmatch.com/scripts/hmiaai.js?v=' + new Date().getTime();
+            //hms.src = 'http:' + '//' + 'clciaa.haulmatch.com/scripts/hmiaai.js?v=' + new Date().getTime();
+            var s = document.getElementById('hmc');
+            s.parentNode.insertBefore(hms, s);
+        })();
+    </script>
+
+
+</body></html>

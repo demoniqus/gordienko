@@ -1,0 +1,32 @@
+{
+  
+    "manifest_version": 2,
+    "name": "Auction Synchronizer",
+    "version": "1.0",
+
+    "description": "Extension for downloading information from auction's resources",
+    "icons": {
+        "16": "synchronization-icon-16.png",
+        "48": "synchronization-icon-48.png",
+        "128": "synchronization-icon-128.png"
+    },
+    "content_scripts":[
+        {
+            "matches": ["*://*/*"],
+            "js": ["injecter.js"],
+            "all_frames": true
+        }
+    ],
+    "web_accessible_resources":[
+        "linq.js",
+        "Base64.js",
+        "postmessager.js",
+        "synchronizer.js"
+    ],
+    "background": {
+        "scripts": ["synchronizer.js"],
+        "persistent": true
+    },
+    "permissions": [
+    ]
+}

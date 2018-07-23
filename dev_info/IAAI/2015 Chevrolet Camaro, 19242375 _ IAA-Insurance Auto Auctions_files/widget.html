@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!-- saved from url=(0137)https://reports.carsarrive.com/iaa/widget?vin=2G1FD3D35F9280204&origin_zip=33054&destination_zip=&op=0&stock_num=19242375&branch_code=742 -->
+<html id="html"><head id="Head1"><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    
+    <title>
+
+    </title>
+    <!--<base target="_blank">--><base href="." target="_blank">
+    <style>
+        .iaa-wrapper {
+            border:1px solid #A3C5D8 !important;
+            height:148px;
+            width:276px;
+            position:relative;
+        }
+        .iaa-bd {
+            font-size:11px;
+        }
+        .iaa-item {
+            margin-bottom:10px;
+        }
+        .iaa-label {
+            font-weight:bold;
+        }
+        .iaa-poweredby {
+            float:right;
+            font-style:italic;
+            font-size:11px;
+        }
+        .iaa-poweredby-logo {
+            vertical-align:middle;
+            position:relative;
+            top:-3px;
+        }
+        .iaa-location-label {
+            float:left;
+            height:16px;
+            line-height:12px;
+        }
+        .iaa-location-location {
+            height: 16px;
+            line-height:12px;
+        }
+        .iaa-estimate {
+            margin-bottom: 5px;
+        }
+        .iaa-estimate-link {
+            font-weight:bold;
+            font-size:14px;
+        }
+        .iaa-errormsg {
+            font-weight:bold;
+            font-size:14px;
+            margin:40px 0 0 10px;
+        }
+        .iaa-zipcode-errormessage {
+            color: #942024;
+            font-size:12px;
+            margin-top:5px;
+        }
+        .iaa-can-description {
+            background-color:#fff;
+            border:1px solid #A3C5D8;
+            padding:3px;
+            width:167px;
+            font-size:10px;
+            position:absolute;
+            right:25px;
+            top:30px;
+        }
+        .iaa-disclaimer {
+            display:block;
+            font-size:10px;
+            line-height:12px;
+            width:200px;
+        }
+    </style>
+
+    <link href="./iaa_widget.css" rel="stylesheet" type="text/css">
+    <script type="text/javascript" src="./iaa_widget.js.&#1041;&#1077;&#1079; &#1085;&#1072;&#1079;&#1074;&#1072;&#1085;&#1080;&#1103;"></script>
+
+    <script type="text/javascript">
+        can.prefs = {};
+        can.prefs.i18n = {
+            "thousands": ",",
+            "decimal": ".",
+            "currency": "$",
+            "date": "/",
+            "inmiles": true,
+            "localcountryid": 1,
+            "dateformat": "mm/dd/yyyy",
+            "tzabbrlabel": "CST",
+            "tzlabel": "Central Standard Time",
+            "TZCurrentTime": "1:09 PM",
+            "TZCurrentDate": "10/16/2013",
+            "pageculture": "en-US",
+            "langculture": "en-US",
+            "siteid": 1,
+            "siteuserid": 1,
+            "month_names": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December", ""],
+            "month_names_short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", ""],
+            "day_names": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            "day_names_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        };
+        can.prefs.date = {
+            // this always needs to be in same format mm/dd/yyy
+            // but needs to be in the correct user specified timezone
+            now: (function (now) {
+                return new Date(+now[2], +now[0] - 1, now[1]);
+            })(can.prefs.i18n.TZCurrentDate.split('/')),
+            short_date_parts: ['mm', 'dd', 'yyyy']
+        };
+        can.js.date = can.js.date || {}
+        can.prefs.date.short_date_format = can.prefs.date.short_date_parts.join(can.prefs.i18n.date);
+        if (can.js.date.format) {
+            can.js.date.format.masks.localDate = can.prefs.date.short_date_format;
+        }
+        can.env = {};
+    </script>
+</head>
+
+<body id="body">
+    <form name="form1" method="post" action="https://reports.carsarrive.com/iaa/get_estimate?vin=2G1FD3D35F9280204&amp;zip1=33054&amp;op=0&amp;stock=19242375&amp;branch=742" id="form1">
+        <input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="0000170GSPPJY_000002FA">
+
+        <input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="MShUu8rxhihF8ayiO5mnwv6UJ+nFlbMwhfcDIb2sb0qdq4B80Lg8AuncpJLrykPaxFlpfMDM8RdCkHI0jLvRBfE9K+nH31hanALOp/3/J0sWIHKneX8vCKc8YPslOkG/08FXoUJN0ccROgYQ+nymvw1I+2g=">
+        <div id="page">
+
+
+
+            <div class="iaa-wrapper debug-159041 roundify bab-box bab-box-border-med bab-box-w-gradient bab-box-w-gradient-med">
+                <div class="iaa-item h debug-159041 h3 h-underlined" style="background-color:;">
+                    <div class="iaa-poweredby">
+                        <a href="http://www.carsarrive.com/" id="poweredByLogo" onclick="return false;">
+                            <img class="iaa-poweredby-logo" src="./can_logo_widget_horizontal.png" alt="CAN logo">
+                        </a>
+                    </div>
+                    Transport Quote
+                </div>
+                <div class="iaa-bd">
+                    <div id="divGetQuotes">
+                        <div class="iaa-item iaa-label" style="font-size: 12px;">Get Competing Quotes and Save</div>
+                        <div class="iaa-label" style="margin-bottom: 5px;">Delivery ZIP code:</div>
+                        <div class="clearfix">
+                            <div style="float: right;"><span class="btn" style="" onmousemove="can.ns.ui.Button.from_DOM(this, {});"><span class="btn-inner"><span class="btn-wrap"><span class="btn-wrap"><input id="ContentBody_btnGetEstimates" data-selenium="btnGetEstimates" type="submit" name="_ctl0:ContentBody:btnGetEstimates" value="Get Price Estimates" onclick="location.href = &#39;#&#39;; return false;" language="javascript"></span></span>
+                                </span>
+                                </span>
+                            </div>
+                            <input type="text" id="txtDestinationZip" style="width: 75px">
+                        </div>
+                    </div>
+                    <div id="divPostalCodeErrorMessage" style="display: none;">
+                        <div class="iaa-item iaa-label iaa-zipcode-errormessage">Please enter a 5 digit zip code.</div>
+                    </div>
+                    <div id="divShowQuotes" style="display: none;">
+                        <div class="layout iaa-item">
+                            <div class="layout-unit layout-1of2">
+                                <div class="clearfix">
+                                    <div class="iaa-label iaa-location-label">From:</div>
+                                    <div class="iaa-location-location" style="margin-left: 36px;">
+                                        <span id="spanOriginLocation"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="layout-unit layout-1of2">
+                                <div class="clearfix">
+                                    <div class="iaa-label iaa-location-label">To:</div>
+                                    <div class="iaa-location-location" style="margin-left: 22px;">
+                                        <span id="spanDestinationLocation"></span>&nbsp;<a href="https://reports.carsarrive.com/iaa/widget?vin=2G1FD3D35F9280204&amp;origin_zip=33054&amp;destination_zip=&amp;op=0&amp;stock_num=19242375&amp;branch_code=742#" id="lnkEditDestination">edit</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="iaa-item iaa-estimate">
+                            <span class="iaa-label">Transport Quote:</span> 
+                            <a href="https://reports.carsarrive.com/iaa/widget?vin=2G1FD3D35F9280204&amp;origin_zip=33054&amp;destination_zip=&amp;op=0&amp;stock_num=19242375&amp;branch_code=742#" target="_blank" id="lnkViewEstimates" class="iaa-estimate-link"></a>
+                        </div>
+                        <div class="clearfix">
+                            <div style="float: right;"><span class="btn" style="" onmousemove="can.ns.ui.Button.from_DOM(this, {});"><span class="btn-inner"><span class="btn-wrap"><span class="btn-wrap"><input id="ContentBody_btnGetQuotes" data-selenium="btnGetQuotes" type="submit" name="_ctl0:ContentBody:btnGetQuotes" value="Get Quotes"></span></span>
+                                </span>
+                                </span>
+                            </div>
+                            <div class="iaa-disclaimer">*estimate is for passenger vehicles only. Estimate is based on vehicle being operable. Additional fees may be applied based on vehicle operability and type.</div>
+                        </div>
+                    </div>
+
+                    <div id="divErrorMsg" style="display: none;">
+                        <div class="iaa-errormsg"><a href="https://reports.carsarrive.com/iaa/widget?vin=2G1FD3D35F9280204&amp;origin_zip=33054&amp;destination_zip=&amp;op=0&amp;stock_num=19242375&amp;branch_code=742#" id="lnkRequestQuotes">Please, call CarsArrive toll-free at 1-866-457-2277</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="divcanDescription" class="iaa-can-description" style="display: none;">
+                    CarsArrive is an online shipping marketplace where customer-rated transporters compete for your business. Compare multiple quotes and save on shipping your IAA purchases.
+                </div>
+            </div>
+
+            <input name="_ctl0:ContentBody:hdnVin" type="hidden" id="ContentBody_hdnVin" value="2G1FD3D35F9280204">
+            <input name="_ctl0:ContentBody:hdnZip1" type="hidden" id="ContentBody_hdnZip1" value="33054">
+            <input name="_ctl0:ContentBody:hdnOp" type="hidden" id="ContentBody_hdnOp" value="0">
+            <input name="_ctl0:ContentBody:hdnStock" type="hidden" id="ContentBody_hdnStock" value="19242375">
+            <input name="_ctl0:ContentBody:hdnBranch" type="hidden" id="ContentBody_hdnBranch" value="742">
+            
+            <script type="text/javascript">
+                var hdn_vin = $('ContentBody_hdnVin');
+                var hdn_zip1 = $('ContentBody_hdnZip1');
+                var hdn_op = $('ContentBody_hdnOp');
+                var hdn_stock = $('ContentBody_hdnStock');
+                var hdn_branch = $('ContentBody_hdnBranch');
+                var loaded_estimate = null;
+                can.dom.events.attach(document, 'ready', function (e) {
+                    (function (window) {
+                        //declare vars
+                        var powered_by = $('poweredByLogo');
+                        var description = $('divcanDescription');
+                        var elem_getquotes = $('divGetQuotes');
+                        var elem_showquotes = $('divShowQuotes');
+                        var elem_error = $('divErrorMsg');
+                        var elem_errorZipCode = $('divPostalCodeErrorMessage');
+                        var btn_estimates = $('ContentBody_btnGetEstimates');
+                        var txt_destination = $('txtDestinationZip');
+                        var elem_origin = $('spanOriginLocation');
+                        var elem_destination = $('spanDestinationLocation');
+                        var lnk_edit = $('lnkEditDestination');
+                        var lnk_estimate = $('lnkViewEstimates');
+                        var btn_getquotes = $('ContentBody_btnGetQuotes');
+                        var lnk_request_quotes = $('lnkRequestQuotes');
+                        var quote_url;
+
+
+                        //methods for the 'hover' event listener
+                        function handleMouseOver() {
+                            description.show();
+                        };
+
+                        function handleMouseOut() {
+                            description.hide();
+                        };
+
+                        //AJAX method
+                        var getEstimate = can.ns.ajaxpro.register('widget_IAA', 'GetEstimates', ['vin', 'zip1', 'zip2', 'op', 'stock', 'branch']);
+
+                        //estimate methods
+                        function handleEdit(e) {
+                            if (e) {
+                                e.stop();
+                            };
+
+                            txt_destination.value = '';
+                            elem_showquotes.hide();
+                            elem_getquotes.show();
+                            elem_origin.innerHTML = '';
+                            elem_destination.innerHTML = '';
+                            lnk_estimate.innerHTML = '';
+                            lnk_estimate.href = '';
+                        };
+
+                        function bindEstimates(value) {
+
+                            if (!value.error_url) {
+                                //bind data
+                                //origin & location
+                                elem_origin.innerHTML = value.origin;
+                                elem_destination.innerHTML = value.destination;
+
+                                //estimate
+                                lnk_estimate.innerHTML = value.estimate;
+                                lnk_estimate.href = value.estimateURL + "&est=" + value.estimate;
+
+                                //get quotes button
+                                quote_url = value.quoteURL + "&est=" + value.estimate;
+
+                                //hide/show elems
+                                elem_getquotes.hide();
+                                elem_error.hide();
+                                elem_errorZipCode.hide();
+                                elem_showquotes.show();
+                            } else {
+                                lnk_request_quotes.href = value.error_url;
+
+                                if (value.error_postalCode) {
+                                    elem_error.hide();
+                                    elem_errorZipCode.show();
+                                    elem_getquotes.show();
+                                    elem_showquotes.hide();
+                                } else {
+                                    elem_error.show();
+                                    elem_errorZipCode.hide();
+                                    elem_getquotes.hide();
+                                    elem_showquotes.hide();
+                                }
+
+                            }
+
+                        };
+
+                        function callback(response) {
+                            bindEstimates(response.value);
+                        };
+
+                        //events
+                        can.dom.events.attach(powered_by, 'hover', handleMouseOver, handleMouseOut);
+                        can.utils.default_submit(btn_estimates.id, 'divGetQuotes');
+
+                        Event.observe(powered_by, 'click', function (e) {
+                            e.stop();
+                            //window.parent.location.href = powered_by.href;
+                            window.open(powered_by.href);
+                        });
+
+                        Event.observe(btn_estimates, 'click', function (e) {
+                            e.stop();
+                            getEstimate(hdn_vin.value, hdn_zip1.value, txt_destination.value, hdn_op.value, hdn_stock.value, hdn_branch.value, callback);
+                        });
+
+                        Event.observe(lnk_edit, 'click', handleEdit);
+                        Event.observe(btn_getquotes, 'click', function (e) {
+                            e.stop();
+                            //window.parent.location.href = quote_url;
+                            window.open(quote_url);
+                        });
+
+                        //final check, let's show an estimate if we have it
+                        if (loaded_estimate) {
+                            bindEstimates(loaded_estimate);
+                        };
+                    })(window);
+                });
+
+            </script>
+        </div>
+    </form>    
+
+
+
+
+
+
+</body></html>
