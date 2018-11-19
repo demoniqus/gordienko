@@ -24,7 +24,7 @@ class GlobalVars {
     static $dbName = 'gordienko';
     /*Логин и пароль для подключения к БД*/
     static $hostUser = 'root';
-    static $hostPass = '';
+    static $hostPass = '1';
     /*Наименование параметра, определяющего тип запроса - получение данных или получение html-страницы*/
     static $dataModeKey = 'mode';
     /*Наименование параметра, определяющего запрашиваемые данные*/
