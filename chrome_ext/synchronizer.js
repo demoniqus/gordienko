@@ -1,54 +1,87 @@
-﻿
-
-var sync = {
+﻿var sync = {
     parentWindow: null,
     lotParams: {},
     lotImages: {},
+    errors: [],
     lot: null,
     auction_params: null,
     syncInstance: null,
-    setParentWindow: function(data) {
-        if (data.original && data.original.source && !this.syncInstance) {
+    setParentWindow: function (data) {
+        if (data.original && data.original.source && !this.syncInstance && !this.parentWindow) {
             this.lot = data.data.lot;
             this.auction_params = data.data.auction;
             /*Запомним идентификатор окна, в которое нужно отправлять полученную информацию*/
             this.parentWindow = data.original.source;
             /*Даем знать, что связь между окнами установлена*/
             this.parentWindow.postMessage({
-                callback: this.getMainSynchronizerName() + '.stop_timer', 
-                contextCallback: this.getMainSynchronizerName(), 
+                callback: this.getMainSynchronizerName() + '.stop_timer',
+                contextCallback: this.getMainSynchronizerName(),
                 timer: data.data.timerName
             }, '*');
             window.sync = new window['sync_' + this.auction_params.Name.toLowerCase()](this);
             window.sync.synchronize(data);
         }
     },
-    getMainSynchronizerName: function(){
+    getMainSynchronizerName: function () {
         return 'window.listSync.' + this.auction_params.Name.toLowerCase();
     },
-    sendData: function(data){
+    sendData: function (data) {
         if (data) {
             this.parentWindow.postMessage(data, '*');
-        }
-        else {
+        } else {
             this.savedData();
         }
-        
+
     }
 };
 
 
-
-var sync_copart = function(instance){
+var sync_copart = function (instance) {
     instance.lotParamsUrls = ['/public/data/lotdetails/solr/', '/public/data/lotdetails/dynamic/'];
-    instance.lotParamsMethods = ['getLotDetails', 'getDynamicLotDetails'];
+    /**
+     * Адрес '/data/lotdetails/dynamic/' начал валиться с ошибкой Unauthorized, поэтому
+     * необходимо подменить функции Copart'а, запрашивающие данные лота, чтобы иметь
+     * возможность перехватить и обработать ошибки
+     *
+     */
+    instance.lotParamsMethods = [
+        {
+            name: 'getLotDetails',
+            action: function (lotNumber, callback) {
+                jQuery.get('/public/data/lotdetails/solr/' + lotNumber, null, function(response){
+
+                    callback && callback(response);
+                })
+            }
+        },
+        {
+            name: 'getDynamicLotDetails',
+            action: function (lotNumber, callback) {
+                jQuery.ajax(
+                    {
+                        url: '/data/lotdetails/dynamic/' + lotNumber,
+                        data: null,
+                        type: "GET",
+                        success: function(response) {
+
+                            callback && callback(response);
+                        }.bind(instance),
+                        error: function(response) {
+                            this.errors.push(response.responseJSON);
+                            callback && callback(response);
+                        }.bind(instance)
+                    }
+                );
+            }
+        }
+    ];
     instance.index = 0;
     instance.angularService = null;
-    instance.synchronize = function(data){
+    instance.synchronize = function (data) {
         /*Аукцион Copart завязан за JS-framework Angular. Получим связь с этим framework'ом*/
         var to;
         var _self = this;
-        var f = function(){
+        var f = function () {
             clearTimeout(to);
             if (angular) {
                 _self.angularService = angular
@@ -58,29 +91,31 @@ var sync_copart = function(instance){
             }
             if (!_self.angularService) {
                 to = setTimeout(f, 150);
-            }
-            else {
+            } else {
                 _self.nextLotParamsMethod();
             }
         };
         to = setTimeout(f, 0);
     };
-    instance.nextLotParamsMethod = function(){
+    instance.nextLotParamsMethod = function () {
         var _self = this;
         if (this.index >= this.lotParamsUrls.length) {
             _self.loadImagesInfo();
-        }
-        else {
-            _self.angularService[this.lotParamsMethods[_self.index]](
-                Base64.decode(_self.lot.Key), 
-                function(data){
+        } else {
+            this.lotParamsMethods[_self.index].action(
+            // _self.angularService[this.lotParamsMethods[_self.index]](
+                Base64.decode(_self.lot.Key),
+                function (data) {
+                    while ('data' in data) {
+                        if (data.lotDetails) {
+                            break;
+                        }
+                        data = data.data;
+                    }
                     if (
-                            data && 
-                            data.data && 
-                            data.data.data && 
-                            data.data.data.lotDetails
-                        ) {
-                        linq(data.data.data.lotDetails).foreach(function(v, k){
+                        data.lotDetails
+                    ) {
+                        linq(data.lotDetails).foreach(function (v, k) {
                             if (!(k in _self.lotParams)) {
                                 _self.lotParams[k] = null;
                             }
@@ -89,35 +124,43 @@ var sync_copart = function(instance){
                             }
                         });
                     }
+                    else if (!data.responseJSON){
+                        _self.errors.push({
+                            error: 'Не найдены данные для импорта. Обратитесь к разработчику',
+                            message: 'Не найдены данные для импорта. Обратитесь к разработчику',
+                            path: window.location.href,
+
+                        });
+                    }
                     _self.index++;
                     _self.nextLotParamsMethod();
                 }
             );
         }
     };
-    instance.loadImagesInfo = function(){
-        
+    instance.loadImagesInfo = function () {
+
         var _self = this;
         _self.angularService.getLotImages(
-            Base64.decode(_self.lot.Key), 
-            function(data){
+            Base64.decode(_self.lot.Key),
+            function (data) {
                 if (
                     data &&
-                    data.data && 
-                    data.data.data && 
-                    data.data.data.imagesList && 
+                    data.data &&
+                    data.data.data &&
+                    data.data.data.imagesList &&
                     data.data.data.imagesList.FULL_IMAGE
-                    ) {
+                ) {
                     _self.lotImages = data.data.data.imagesList.FULL_IMAGE
                 }
                 /*Все данные собраны. Отдадим их на главную страницу для начала синхронизации лота*/
                 _self.sendData();
-            }, 
+            },
             null
         );
     };
-    
-    instance.savedData = function(callback){
+
+    instance.savedData = function (callback) {
         /*
          * Выдергиваем дату аукциона. На начало мая 2017 она лежит с ключом ad и представляет 
          * из себя количество миллисекунд с 1970 года.
@@ -132,29 +175,29 @@ var sync_copart = function(instance){
                 d < 10 && (d = '0' + '' + d);
                 var y = date.getFullYear();
                 this.lotParams.auctiondate = m + '' + d + '' + y;
-            }
-            catch (e) {
-                
+            } catch (e) {
+
             }
         }
-        
+
         instance.sendData({
             auction: this.auction_params,
             lot: this.lot,
             lotParams: this.lotParams,
             lotImages: this.lotImages,
+            errors: this.errors,
             callback: this.getMainSynchronizerName() + '.saveData',
             contextCallback: this.getMainSynchronizerName()
-            
+
         });
     };
-    
+
     return instance;
 };
 
-var sync_iaai = function(instance){
-    
-    instance.synchronize = function(data){
+var sync_iaai = function (instance) {
+
+    instance.synchronize = function (data) {
         /*Проверим, есть ли реальная активная авторизованная сессия*/
         if (/^[^?]+login/i.test(window.location.href)) {
             this.parentWindow.postMessage({
@@ -164,16 +207,15 @@ var sync_iaai = function(instance){
             return;
         }
         if (
-                /^[^?]+vehicle/i.test(window.location.href) &&
-                /^[^?]+\?.*itemid/i.test(window.location.href)
-            ) {
+            /^[^?]+vehicle/i.test(window.location.href) &&
+            /^[^?]+\?.*itemid/i.test(window.location.href)
+        ) {
             this.sendData();
-        }
-        else if (/^[^?]+purchase/i.test(window.location.href)) {
+        } else if (/^[^?]+purchase/i.test(window.location.href)) {
             this.getLotList();
         }
     };
-    instance.getLotList = function(){
+    instance.getLotList = function () {
         var _self = this;
         var listLot = [];
         /*
@@ -181,13 +223,13 @@ var sync_iaai = function(instance){
          * т.к. при изменении фильтра это самый актуальный список
          */
         var listLot = linq(_self.getMainTable().find('tr'))
-            .where(function(row){
+            .where(function (row) {
                 return /stockitem/i.test(row.id);
             })
-            .select(function(row){
+            .select(function (row) {
                 return _self.extractLotInfoFromTableRow(row);
             })
-            .where(function(lot){
+            .where(function (lot) {
                 return !!lot.StockNo && !!lot.OaAuctionItemId;
             })
             .collection;
@@ -197,7 +239,7 @@ var sync_iaai = function(instance){
                 id: 'filter-date',
                 type: 'radio',
                 elements: linq($('#filter-date').children())
-                    .select(function(li){
+                    .select(function (li) {
                         var input = $(li).find('input:first').get(0);
                         var label = $(li).find('label:first').get(0);
                         var fElem = {
@@ -217,8 +259,8 @@ var sync_iaai = function(instance){
         var pagesInfo = [];
         if (pagesContainer.length > 0) {
             pagesInfo = linq(pagesContainer.children())
-                .select(function(p){
-                    
+                .select(function (p) {
+
                     var a = $(p).find('a:first').get(0);
                     if (!a) {
                         return {};
@@ -240,7 +282,7 @@ var sync_iaai = function(instance){
                 })
                 .collection;
         }
-        
+
         /*Данные собрали - отправляем их на основную страницу*/
         this.parentWindow.postMessage({
             listLot: listLot,
@@ -250,7 +292,7 @@ var sync_iaai = function(instance){
             pages: pagesInfo
         }, '*');
     };
-    instance.savedData = function(){
+    instance.savedData = function () {
         var sData = {
             callback: this.getMainSynchronizerName() + '.saveData',
             contextCallback: this.getMainSynchronizerName(),
@@ -260,22 +302,22 @@ var sync_iaai = function(instance){
         };
         /*Получим список изображений*/
         var indicator = /deepzoomind/i;
-        var script = linq($('script')).first(function(scr){
+        var script = linq($('script')).first(function (scr) {
             return scr.childNodes.length > 0 &&
-            linq(scr.childNodes).first(function(cn){
-                return cn.nodeType === 3 &&
-                    cn.nodeValue && 
-                    indicator.test(cn.nodeValue);
-            }) !== null;
+                linq(scr.childNodes).first(function (cn) {
+                    return cn.nodeType === 3 &&
+                        cn.nodeValue &&
+                        indicator.test(cn.nodeValue);
+                }) !== null;
         });
         if (script) {
-            var script_text = linq(script.childNodes).first(function(cn){
+            var script_text = linq(script.childNodes).first(function (cn) {
                 return cn.nodeType === 3 &&
-                    cn.nodeValue && 
+                    cn.nodeValue &&
                     indicator.test(cn.nodeValue);
             }).nodeValue;
             script_text = script_text.split(/\s*var\s+[a-z_][a-z_0-9]*\s*=/i);
-            script_text = linq(script_text).first(function(row){
+            script_text = linq(script_text).first(function (row) {
                 return indicator.test(row);
             });
             if (script_text) {
@@ -285,14 +327,14 @@ var sync_iaai = function(instance){
                 }
             }
             instance.sendData(sData);
-        }
-        else if (
-                window.IMAGEMODULE && 
-                window.IMAGEMODULE.GetImageSection && 
-                typeof function(){} === typeof window.IMAGEMODULE.GetImageSection &&
-                window.GetDimensions
-                ) {
-            window.IMAGEMODULE.GetImageSection = function(stockNumber, branchCode, salvageId, imgUrl){
+        } else if (
+            window.IMAGEMODULE &&
+            window.IMAGEMODULE.GetImageSection &&
+            typeof function () {
+            } === typeof window.IMAGEMODULE.GetImageSection &&
+            window.GetDimensions
+        ) {
+            window.IMAGEMODULE.GetImageSection = function (stockNumber, branchCode, salvageId, imgUrl) {
                 var data = {
                     stockNumber: stockNumber,
                     branchCode: branchCode,
@@ -304,7 +346,7 @@ var sync_iaai = function(instance){
                     async: false,
                     cache: false,
                     contentType: 'application/json; charset=utf-8',
-                    data: { "json": JSON.stringify(data) },
+                    data: {"json": JSON.stringify(data)},
                     success: function (data) {
                         if (data && data.keys && data.keys[0]) {
                         } else {
@@ -322,12 +364,12 @@ var sync_iaai = function(instance){
                 'https://vis.iaai.com:443/'
             );
         }
-        
+
     };
-    instance.getMainTable = function(){
+    instance.getMainTable = function () {
         return jQuery('#dvPurchasehistoryList .table');
     };
-    instance.extractLotInfoFromTableRow = function(row){
+    instance.extractLotInfoFromTableRow = function (row) {
         /*Получим ссылку на превьюху изображения*/
         var img = $(row).find('img.lazy:first').get(0);
         var imgSrc = null;
@@ -338,11 +380,14 @@ var sync_iaai = function(instance){
                 attr && (imgSrc = attr.value);
             }
             if (imgSrc && !(/^http/i.test(imgSrc))) {
-                imgSrc = window.location.protocol + '//' + (window.location.host || window.location.hostname) + (imgSrc[0] in {'/': true, '\\': true} ? '' : '/') + imgSrc;
+                imgSrc = window.location.protocol + '//' + (window.location.host || window.location.hostname) + (imgSrc[0] in {
+                    '/': true,
+                    '\\': true
+                } ? '' : '/') + imgSrc;
             }
         }
         /*Получим идентификатор, по которому можно загрузить страницу лота*/
-        var a = linq($(row).find('a')).first(function(link){
+        var a = linq($(row).find('a')).first(function (link) {
             return /vehicledetail/i.test(link.attributes['onclick'].value);
         });
         var OaAuctionItemId = null;
@@ -355,38 +400,38 @@ var sync_iaai = function(instance){
         /*Получим ключ лота и Caption для показа пользователю*/
         var StockNo = null;
         var Caption = '';
-        
-        var el = linq($(row).find('*')).first(function(e){
-            return linq(e.childNodes).first(function(child){
+
+        var el = linq($(row).find('*')).first(function (e) {
+            return linq(e.childNodes).first(function (child) {
                 return child.nodeType === 3 && child.nodeValue && /stock\s*[#:][#:]?/i.test(child.nodeValue);
             }) !== null;
         });
         if (el) {
-            StockNo = linq(el.childNodes).first(function(child){
-                    return child.nodeType === 3 && child.nodeValue && /stock\s*[#:][#:]?/i.test(child.nodeValue);
-                }).nodeValue
+            StockNo = linq(el.childNodes).first(function (child) {
+                return child.nodeType === 3 && child.nodeValue && /stock\s*[#:][#:]?/i.test(child.nodeValue);
+            }).nodeValue
                 .replace(/stock/ig, '')
                 .replace(/[:#-]/g, '')
                 .replace(/^\s+/g, '')
                 .replace(/\s+$/g, '');
-            Caption = linq($(el).parents('td:first').find('*')).reduce(function(res, domel){
+            Caption = linq($(el).parents('td:first').find('*')).reduce(function (res, domel) {
                 return res + linq(domel.childNodes)
-                    .where(function(child){
+                    .where(function (child) {
                         return child.nodeType === 3 && child.nodeValue && child.nodeValue.replace(/^\s+/g, '').replace(/\s+$/g, '') !== '';
                     })
-                    .select(function(child){
+                    .select(function (child) {
                         return '<p>' + child.nodeValue.replace(/^\s+/g, '').replace(/\s+$/g, '') + '</p>';
                     }).collection.join('');
             }, Caption);
         }
         return {
             __previewLotImg: imgSrc,
-            OaAuctionItemId: OaAuctionItemId, 
+            OaAuctionItemId: OaAuctionItemId,
             StockNo: StockNo,
             Caption: Caption
         };
     };
-    instance.changeFilterState = function(data){
+    instance.changeFilterState = function (data) {
         var _self = this;
         var filter = data.data;
         /*Чтобы понять, что новые данные загрузились, предварительно удалим старые*/
@@ -397,8 +442,9 @@ var sync_iaai = function(instance){
         /*А теперь ждем, пока не произведется загрузка данных по новому фильтру*/
         _self.waitSyncAfterReload();
     };
-    instance.changePage = function(data){
-        if (window.gotoPage && typeof function(){} === typeof window.gotoPage) {
+    instance.changePage = function (data) {
+        if (window.gotoPage && typeof function () {
+        } === typeof window.gotoPage) {
             var pageInfo = data.data;
             var _self = this;
             /*Чтобы понять, что новые данные загрузились, предварительно удалим старые*/
@@ -409,10 +455,10 @@ var sync_iaai = function(instance){
             _self.waitSyncAfterReload();
         }
     };
-    instance.waitSyncAfterReload = function(){
+    instance.waitSyncAfterReload = function () {
         var _self = this;
         var to;
-        var f = function(){
+        var f = function () {
             clearTimeout(to);
             /*
              * Ожидаем до тех пор, пока в главной таблице не появятся дочерние элементы 
@@ -422,19 +468,25 @@ var sync_iaai = function(instance){
             if (_self.getMainTable().children().length > 0) {
                 /*Данные загрузились и можно заново их синхронизировать*/
                 _self.synchronize();
-            }
-            else {
+            } else {
                 to = setTimeout(f, 500);
             }
         };
         to = setTimeout(f, 500);
-        
+
     };
-    
-    
-    
+
+
     return instance;
 };
 
-
-
+//
+//
+// setTimeout(function(){
+//     if (window.parent !== window) {
+//         console.log(window.parent.crossDomainQuery)
+//     }
+//     // let item = document.createElement('DIV');
+//     // item.classList.add('DEMONIQUS');
+//     // document.body.appendChild(item);
+// }, 1500);

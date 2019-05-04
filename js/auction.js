@@ -267,12 +267,14 @@ auction = function(params){
                         return;
                     }
                     _self.synchronize(data.auction_lotes_list, function(syncLotList, errorLots){
-                        _self.htmlForm.find('.sync-state:first').empty().append(
-                            'Синхронизировано лотов ' + (syncLotList.length - errorLots.length) + 
-                            (errorLots.length > 0 ?
-                                '<br /><span style="color:#f66;">Не синхронизированы лоты ' + join(', ', errorLots) + '</span>'
-                                : '')
-                        );
+                        let message;
+                        if (errorLots.length) {
+                            message = 'Ошибки при синхронизации <span style="color: #f66;">' + errorLots.join(', ') + '</span>';
+                        }
+                        else {
+                            message = 'Синхронизировано лотов ' + syncLotList.length;
+                        }
+                        _self.htmlForm.find('.sync-state:first').empty().append(message);
                         _self.update();
                     });
                 }
@@ -286,7 +288,7 @@ auction = function(params){
                      * Если между окнами не установлена связь посредством postMessage,
                      * то синхронизация невозможна
                      */
-                    alert('Синхронизация аукциона ' + _self.params.name + ' не может быть выполнена, из-за отстутствия необходимых возможностей браузера.')
+                    alert('Синхронизация аукциона ' + _self.params.name + ' не может быть выполнена, из-за отстутствия необходимых возможностей браузера.');
                     return;
                 }
                 /*Синхронизация через фрейм*/
@@ -438,6 +440,7 @@ synchronizer = function (auction_params) {
         syncLotList: null,
         syncErrorsList: [],
         callback: null,
+        errors: {},
         afterSave: function(){},
         connectionTimeoutTime: function(){
             /*Функция возвращает предельное время ожидания поключения к окну-источнику данных*/
@@ -483,15 +486,23 @@ synchronizer = function (auction_params) {
                     }
                     _self.frameWindow.postMessage({
                         timerName: 'windows_connect',
-                        callback: 'sync.setParentWindow', 
-                        contextCallback: 'sync', 
-                        'lot': lot, 
+                        callback: 'sync.setParentWindow',
+                        contextCallback: 'sync',
+                        'lot': lot,
                         'auction': _self.auction_params
                     }, '*');
                     _self.timers.windows_connect = setTimeout(f, 250);
                 };
                 this.timers.windows_connect = setTimeout(f, 250);
                 this.timers.windows_connect_start_time = (new Date()).getTime();
+
+                // let self = this;
+                // setTimeout(function(){
+                //     console.log(self.frame.contentDocument || self.frame.contentWindow.document);
+                // }, 6000);
+
+
+
                 this.state_panel.empty().append('Синхронизация лота ' + Base64.decode(lot.Key) + ': установка соединения с источником');
             }
             else {
@@ -559,6 +570,12 @@ synchronizer = function (auction_params) {
             }
         },
         saveData: function(data){
+            let importErrorsHandler = function(errors) {
+                return linq(errors)
+                    .select(function(errorData){
+                        return 'Адрес на сайте аукциона ' + errorData.path + '<br />Текст ошибки ' + (errorData.error || '');
+                    }).collection.join('<hr /><br />');
+            };
             var _self = this;
             var keyLot = Base64.decode(_self.syncLotList[this.index].Key);
             this.state_panel.empty().append('Синхронизация лота ' + keyLot 
@@ -569,6 +586,10 @@ synchronizer = function (auction_params) {
                     return res;
                 }, {});
             sData = this.savedData(sData, data);
+            let errors = data.data.errors && data.data.errors.length ? data.data.errors : null;
+            if (errors) {
+                _self.errors[keyLot] = errors;
+            }
             /*Из аукциона синхронизация производится с перезаписью всей информации о лоте*/
             sData.forceSync = true;
             $.ajax({
@@ -586,13 +607,22 @@ synchronizer = function (auction_params) {
                             data.syncStatus === false
                         ) {
                         message = '<span style="color:#f66;">Лот ' + keyLot + ' не синхронизирован: ' + data.message + '</span>';
-                        _self.syncErrorsList.push(keyLot);
+                        _self.syncErrorsList.push(errors ? importErrorsHandler(errors) : keyLot);
                     }
                     typeof function(){} === typeof _self.afterSave && _self.afterSave(_self.syncLotList[_self.index]);
                     _self.index++;
-                    _self.state_panel.empty().append(
-                            message + ' (' + _self.index + ' из ' + _self.syncLotList.length + ')'
-                    );
+
+                    message += ' (' + _self.index + ' из ' + _self.syncLotList.length + ')'
+                    if (errors) {
+                        _self.syncErrorsList.push(keyLot);
+                        _self.syncErrorsList.push(importErrorsHandler(errors));
+                        message += '<br /><span style="color:#f66;">При синхронизации лота ' + keyLot + ' возникли ошибки: <br /> ';
+
+                        message += importErrorsHandler(errors);
+
+                        message += '</span>';
+                    }
+                    _self.state_panel.empty().append(message);
                     /*
                      * В данном случае мы потратили время на загрузку страницы, на загрузку картинок сервером,
                      * поэтому нет смысла еще тратить время на ожидание
@@ -913,3 +943,8 @@ synchronizer_copart = function(auction_params){
     };
 };
 
+function crossDomainQuery(data) {
+    console.log('crossDomainQuery', data);
+
+    return 'crossDomainQueryResultData'
+}

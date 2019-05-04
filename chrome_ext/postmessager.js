@@ -9,8 +9,10 @@ function postMessager(data) {
         try {
             _data.data = JSON.parse(data.data);
         } catch (e) {
-            console.log('JSON parse error ', data.data);
-            throw 'Не удалось преобразовать данные из строки в формат JSON. Данные: ' + data.data;
+            console.log('Не удалось преобразовать данные из строки в формат JSON. Данные: ' + data.data);
+            // console.log('JSON parse error ', data.data);
+            return;
+
         }
     }
     var context = window;
